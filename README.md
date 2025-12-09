@@ -184,7 +184,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Автор
 
-Built by [Your Name] | [Москва, 2025]
+Built by mgmob | [Москва, 2025]
 
 ---
 
