@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { ApiLogEntry } from '../../lib/apiLogger';
 import { apiLogger } from '../../lib/apiLogger';
+import { formatData } from '../../lib/debugPanelUtils';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
@@ -38,13 +39,9 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
     return filtered;
   }, [logs, statusFilter, actionFilter]);
 
-  const uniqueActions = Array.from(new Set(logs.map(log => log.requestData?.action).filter(Boolean))) as string[];
+  const uniqueActions = Array.from(new Set(logs.map(log => String(log.requestData?.action || '')).filter(Boolean))) as string[];
 
-  const formatData = (data: Record<string, unknown> | string | null) => {
-    if (!data) return '—';
-    if (typeof data === 'string') return data;
-    return JSON.stringify(data, null, 2);
-  };
+
 
   const getStatusVariant = (log: ApiLogEntry): 'success' | 'error' | 'warning' => {
     if (log.error) return 'error';
@@ -187,7 +184,7 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
                   </td>
                   <td className="px-4 py-2">
                     <div>
-                      {log.requestData?.action || '—'}
+                      {log.requestData?.action ? String(log.requestData.action) : '—'}
                       <br />
                       <span className="text-gray-500 text-xs">
                         {log.location}
@@ -213,7 +210,7 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
                   </td>
                   <td className="px-4 py-2">
                     <pre className="text-xs bg-gray-100 p-2 rounded max-h-32 overflow-y-auto">
-                      {log.expected || '—'}
+                      {formatData(log.expected)}
                     </pre>
                   </td>
                   <td className="px-4 py-2">
