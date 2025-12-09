@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "github.com/modelcontextprotocol/servers/tree/main/src/memory": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-memory"],
+            "env": {
+                "MEMORY_FILE_PATH": "C:\\Users\\mgmob\\Documents\\Cline\\MCP\\memory\\memory.jsonl"
+            },
+            "disabled": false,
+            "autoApprove": []
+        }
+    }
+}
