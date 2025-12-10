@@ -9,6 +9,9 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17"
   },
+  "scripts": {
+    "n8n:backup": "node backend/n8n/scripts/backup.js"
+  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

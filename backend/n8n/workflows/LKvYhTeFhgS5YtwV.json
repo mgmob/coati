@@ -1,0 +1,119 @@
+{
+  "updatedAt": "2025-12-06T20:44:26.000Z",
+  "createdAt": "2025-12-06T20:17:56.426Z",
+  "id": "LKvYhTeFhgS5YtwV",
+  "name": "My workflow 2",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "63f7dae4-5d87-4c09-bff2-02a6b7a2d426",
+      "name": "Webhook Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -272
+      ],
+      "webhookId": "7f3653b0-c03f-43cf-81fd-7af895a0a080"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "0ccb7c94-1251-4285-965d-d17fe0197082",
+      "name": "AI Analyst",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fan57PVnre3Q7wSA",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"reply\": \"{{ $json.content }}\"\n}",
+        "options": {}
+      },
+      "id": "4ce19756-7609-42fe-92c4-827beea58478",
+      "name": "Respond to Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -272
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Chat": {
+      "main": [
+        [
+          {
+            "node": "AI Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analyst": {
+      "main": [
+        [
+          {
+            "node": "Respond to Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "185fb60e-5f44-4aa9-8482-07f602026d62",
+  "activeVersionId": null,
+  "versionCounter": 6,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2025-12-06T20:17:56.431Z",
+      "createdAt": "2025-12-06T20:17:56.431Z",
+      "role": "workflow:owner",
+      "workflowId": "LKvYhTeFhgS5YtwV",
+      "projectId": "vhAcEcvjmKJHPwqK",
+      "project": {
+        "updatedAt": "2025-12-06T09:19:55.227Z",
+        "createdAt": "2025-12-06T09:11:25.609Z",
+        "id": "vhAcEcvjmKJHPwqK",
+        "name": "Михаил Гончаров <mgmob@yandex.ru>",
+        "type": "personal",
+        "icon": null,
+        "description": null
+      }
+    }
+  ]
+}

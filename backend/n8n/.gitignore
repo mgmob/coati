@@ -1,0 +1,8 @@
+# Ignore sensitive data
+.env
+*.sqlite
+database.sqlite
+config/
+
+# But allow workflow JSON files (logic only, sanitized)
+!workflows/*.json

@@ -1,0 +1,90 @@
+{
+  "updatedAt": "2025-12-06T20:44:29.000Z",
+  "createdAt": "2025-12-06T09:46:29.892Z",
+  "id": "PcOFTkv90y5APpGa",
+  "name": "My workflow",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "12cae442-5a03-4283-9f3f-9cf1c14bb4d3",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://arangodb:8529/_db/coati/_api/cursor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"query\": \"RETURN 'Hello Coati!'\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "c9d80359-e46a-4fba-8b1f-1567647bcbb6",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "jAZFxtYhDSH0xDn5",
+          "name": "ArangoDB Root"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "6c25958a-8e69-4d9d-b236-e3b220d45a60",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2025-12-06T09:46:29.897Z",
+      "createdAt": "2025-12-06T09:46:29.897Z",
+      "role": "workflow:owner",
+      "workflowId": "PcOFTkv90y5APpGa",
+      "projectId": "vhAcEcvjmKJHPwqK",
+      "project": {
+        "updatedAt": "2025-12-06T09:19:55.227Z",
+        "createdAt": "2025-12-06T09:11:25.609Z",
+        "id": "vhAcEcvjmKJHPwqK",
+        "name": "Михаил Гончаров <mgmob@yandex.ru>",
+        "type": "personal",
+        "icon": null,
+        "description": null
+      }
+    }
+  ]
+}

@@ -15,12 +15,30 @@ services:
     networks:
       - coati-net
 
+  # --- Ollama ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: coati-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - /c/Users/mgmob/.ollama:/root/.ollama
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    networks:
+      - coati-net
+
   # --- Бэкенд (n8n) ---
   n8n:
     image: n8nio/n8n:latest
     container_name: coati-n8n
     ports:
       - "5678:5678"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
@@ -29,16 +47,20 @@ services:
       # Настройки для подключения к Arango (понадобятся позже внутри n8n)
       - ARANGO_HOST=arangodb
       - ARANGO_PORT=8529
+      - OLLAMA_HOST=http://ollama:11434
     volumes:
       - ./infra/n8n_data:/home/node/.n8n
     networks:
       - coati-net
     depends_on:
       - arangodb
+      - ollama
 
 networks:
   coati-net:
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1350
 volumes:
   arango_data:
   arango_apps:

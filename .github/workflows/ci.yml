@@ -163,13 +163,11 @@ jobs:
       continue-on-error: true
 
     - name: 🕵️ CodeQL analysis
-      if: matrix.node-version == '20.x'
       uses: github/codeql-action/init@v3
       with:
         languages: javascript
 
     - name: 🔍 Perform CodeQL analysis
-      if: matrix.node-version == '20.x'
       uses: github/codeql-action/analyze@v3
 
   # === DOCKER BUILD TEST ===
@@ -204,9 +202,6 @@ jobs:
     if: github.event_name == 'pull_request' && contains(github.head_ref, 'feature/')
     runs-on: ubuntu-latest
     needs: [frontend, validate-project]
-    environment:
-      name: preview
-      url: ${{ steps.deploy.outputs.url }}
 
     steps:
     - name: 📥 Checkout code

@@ -1,0 +1,122 @@
+{
+  "updatedAt": "2025-12-06T12:17:28.000Z",
+  "createdAt": "2025-12-06T10:42:35.072Z",
+  "id": "lv6R4eU5IiFZxxNQ",
+  "name": "API - Create Project",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "projects",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1772631f-8e80-4d05-8628-8ebec43c11f9",
+      "name": "Webhook",
+      "webhookId": "b18e53eb-738f-4a9f-b71c-972a2ceaee30"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://arangodb:8529/_db/coati/_api/cursor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"INSERT { name: @name, description: @description, createdAt: DATE_NOW() } INTO Projects RETURN NEW\",\n  \"bindVars\": {\n    \"name\": \"{{ $json.body.name }}\",\n    \"description\": \"{{ $json.body.description }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "68d3a294-b31b-46e9-9601-05ca74e1b536",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "jAZFxtYhDSH0xDn5",
+          "name": "ArangoDB Root"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7d14d90d-a54c-4ef5-8199-18d2c4df4fec",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "ebd5277b-be87-4c86-9e8d-120f9c43291f",
+  "activeVersionId": "ebd5277b-be87-4c86-9e8d-120f9c43291f",
+  "versionCounter": 8,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2025-12-06T10:42:35.078Z",
+      "createdAt": "2025-12-06T10:42:35.078Z",
+      "role": "workflow:owner",
+      "workflowId": "lv6R4eU5IiFZxxNQ",
+      "projectId": "vhAcEcvjmKJHPwqK",
+      "project": {
+        "updatedAt": "2025-12-06T09:19:55.227Z",
+        "createdAt": "2025-12-06T09:11:25.609Z",
+        "id": "vhAcEcvjmKJHPwqK",
+        "name": "Михаил Гончаров <mgmob@yandex.ru>",
+        "type": "personal",
+        "icon": null,
+        "description": null
+      }
+    }
+  ]
+}
