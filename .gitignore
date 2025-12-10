@@ -12,22 +12,15 @@ chat_gemini.md
 temp_cline_mcp.json
 temp.txt
 tree.txt
-commit_message.txt
-# Данные и скрипты.md
+Данные и скрипты.md
 Untitled-1.html
 
 # Configuration files with sensitive data
-infra/n8n_data/config
-infra/n8n_data/.env
 *.key
 *.pem
 *encryption*
 *secret*
 *password*
-
-# Directories to ignore
-infra/arangodb_data/
-infra/n8n_data/
 
 # Logs
 *.log
