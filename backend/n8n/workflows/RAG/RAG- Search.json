@@ -1,0 +1,103 @@
+{
+  "name": "RAG: Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-docs",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d8fdc8f8-7eb6-4d44-bf61-4bbeda745243",
+      "name": "Webhook Search",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -288
+      ],
+      "webhookId": "search-docs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://arangodb:8529/_db/rag/_api/cursor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "FOR doc IN docs_view SEARCH ANALYZER(doc.embedding != NULL, \"identity\") LET score = COSINE_SIMILARITY(doc.embedding, @vector) SORT score DESC LIMIT 5 RETURN { text: doc.text, path: doc.file_path, score: score }"
+            },
+            {
+              "name": "bindVars",
+              "value": "={{ { \"vector\": $json.body.vector } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1d07fbc-ed3a-4a77-946b-a71b4f5a9b14",
+      "name": "ArangoDB Search Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        432,
+        -288
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "jAZFxtYhDSH0xDn5",
+          "name": "ArangoDB Root"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result }}",
+        "options": {}
+      },
+      "id": "cd71e105-299c-4b68-aada-996284476565",
+      "name": "Respond with Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -288
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Search": {
+      "main": [
+        [
+          {
+            "node": "ArangoDB Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ArangoDB Search Query": {
+      "main": [
+        [
+          {
+            "node": "Respond with Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

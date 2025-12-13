@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Модные замены гирлянде</title>
+    <style>
+        :root {
+            --bg-color: #111;
+            --text-color: #fff;
+            --accent-lime: #ccff00;
+            --accent-pink: #ff00ff;
+            --accent-blue: #00ffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', sans-serif;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            text-align: center;
+            background: #1a1a1a;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { font-size: 0.8rem; color: #888; margin-top: 5px; }
+
+        /* Общие стили для секций демо */
+        .demo-section {
+            margin: 60px 0;
+            position: relative;
+        }
+
+        .demo-label {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            color: #888;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            margin-bottom: 0;
+        }
+
+        /* ----------------------------------------------------
+           ВАРИАНТ 1: Marquee (Бегущая строка)
+           ---------------------------------------------------- */
+        .marquee-wrapper {
+            background-color: var(--accent-lime);
+            color: #000;
+            padding: 10px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            font-weight: 900;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* ----------------------------------------------------
+           ВАРИАНТ 2: Neon Gradient (Киберпанк)
+           ---------------------------------------------------- */
+        .neon-strip {
+            height: 4px;
+            width: 100%;
+            background: linear-gradient(90deg,
+                var(--accent-pink),
+                var(--accent-blue),
+                var(--accent-lime),
+                var(--accent-pink));
+            background-size: 400% 100%;
+            animation: neon-flow 3s linear infinite;
+            box-shadow: 0 5px 20px rgba(255, 0, 255, 0.5);
+            position: relative;
+        }
+
+        @keyframes neon-flow {
+            0% { background-position: 100% 0; }
+            100% { background-position: 0 0; }
+        }
+
+        /* ----------------------------------------------------
+           ВАРИАНТ 3: Interactive String (Физика)
+           ---------------------------------------------------- */
+        .string-container {
+            height: 100px;
+            width: 100%;
+            position: relative;
+            cursor: row-resize;
+            overflow: hidden;
+            background: #161616;
+        }
+
+        svg#elastic-string {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        path {
+            fill: none;
+            stroke: var(--accent-blue);
+            stroke-width: 2;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .string-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #444;
+            pointer-events: none;
+            font-size: 0.8rem;
+        }
+
+        /* ----------------------------------------------------
+           ВАРИАНТ 4: Pixel Art / Glitch
+           ---------------------------------------------------- */
+        .pixel-bar {
+            height: 30px;
+            background-color: #220022;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 2px solid #440044;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Шум (фон) */
+        .pixel-noise {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMzMzMzMzMiLz48cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDQ0NDQ0Ii8+PC9zdmc+');
+            opacity: 0.3;
+        }
+
+        /* 8-битный персонаж (CSS квадраты) */
+        .pixel-char {
+            width: 20px;
+            height: 20px;
+            background: var(--accent-lime);
+            box-shadow:
+                4px 0 var(--accent-lime),
+                -4px 0 var(--accent-lime),
+                0 -4px var(--accent-lime),
+                0 4px var(--accent-lime),
+
+                8px 0 var(--accent-lime),
+                -8px 0 var(--accent-lime),
+                0 -8px var(--accent-lime),
+                0 8px var(--accent-lime);
+
+            position: absolute;
+            bottom: 5px;
+            left: -30px;
+            animation: pixel-run 8s linear infinite;
+        }
+
+        @keyframes pixel-run {
+            0% { left: -30px; transform: scaleX(1); }
+            45% { left: 45%; transform: scaleX(1); }
+            50% { left: 50%; transform: scaleX(1) translateY(-10px) rotate(180deg); } /* Трюк */
+            55% { left: 55%; transform: scaleX(1) translateY(0) rotate(360deg); }
+            100% { left: 105%; transform: scaleX(1); }
+        }
+
+        /* ----------------------------------------------------
+           ВАРИАНТ 5: Scroll Progress (Функциональный)
+           ---------------------------------------------------- */
+        .scroll-demo-wrapper {
+            height: 200px; /* Имитация контента */
+            background: #111;
+            border: 1px dashed #333;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #555;
+        }
+
+        .progress-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #333;
+            z-index: 20;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-pink);
+            width: 0%; /* Меняется JS */
+            position: relative;
+            transition: width 0.1s;
+        }
+
+        /* Огонек на конце */
+        .spark {
+            position: absolute;
+            right: -5px;
+            top: -7px;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #fff 10%, yellow 40%, transparent 70%);
+            filter: blur(2px);
+            animation: flicker 0.1s infinite;
+        }
+
+        @keyframes flicker {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0.9); opacity: 1; }
+        }
+
+        /* Просто заглушка для скролла */
+        .dummy-content {
+            height: 1500px;
+            background: linear-gradient(to bottom, #111, #222);
+            padding: 20px;
+            text-align: center;
+            color: #444;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Примеры для сайта</h1>
+        <div class="subtitle">Как заменить гирлянду</div>
+    </header>
+
+    <!-- ВАРИАНТ 1 -->
+    <div class="demo-section">
+        <div class="demo-label">1. Neo-Brutalism Marquee (Бегущая строка)</div>
+        <div class="marquee-wrapper">
+            <div class="marquee-content">
+                🎄 С НОВЫМ ГОДОМ • СКИДКИ ДО 50% • ❄️ HAPPY NEW YEAR • PROMO: 2024 • 🔥 HOT SALE • 🎄 С НОВЫМ ГОДОМ • СКИДКИ ДО 50% • ❄️ HAPPY NEW YEAR • PROMO: 2024 • 🔥 HOT SALE •
+            </div>
+        </div>
+    </div>
+
+    <!-- ВАРИАНТ 2 -->
+    <div class="demo-section">
+        <div class="demo-label">2. Cyberpunk Glow (Неоновый градиент)</div>
+        <!-- Эта полоска ставится сразу под хедером -->
+        <div class="neon-strip"></div>
+    </div>
+
+    <!-- ВАРИАНТ 3 -->
+    <div class="demo-section">
+        <div class="demo-label">3. Interactive String (Тронь мышкой)</div>
+        <div class="string-container" id="string-demo">
+            <span class="string-hint">Проведи мышкой здесь</span>
+            <svg id="elastic-string">
+                <path d="M0,0 Q500,0 1000,0" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- ВАРИАНТ 4 -->
+    <div class="demo-section">
+        <div class="demo-label">4. Pixel Art / Glitch (Ретро-вейв)</div>
+        <div class="pixel-bar">
+            <div class="pixel-noise"></div>
+            <div class="pixel-char"></div> <!-- Квадратик - это абстрактный персонаж -->
+        </div>
+    </div>
+
+    <!-- ВАРИАНТ 5 -->
+    <div class="demo-section">
+        <div class="demo-label">5. Scroll Progress (Листай страницу вниз)</div>
+        <!-- Этот бар обычно фиксируется (position: fixed), здесь для демо он внутри блока -->
+        <div class="progress-container">
+            <div class="progress-bar" id="myBar">
+                <div class="spark"></div>
+            </div>
+        </div>
+        <div class="dummy-content">
+            <p>↓ Скролльте вниз, чтобы увидеть эффект фитиля ↓</p>
+            <br><br><br><br><br>
+            <p>Продолжайте скроллить...</p>
+        </div>
+    </div>
+
+    <script>
+        // ЛОГИКА ДЛЯ ВАРИАНТА 3 (ИНТЕРАКТИВНАЯ НИТЬ)
+        const svg = document.getElementById('elastic-string');
+        const path = svg.querySelector('path');
+        const container = document.getElementById('string-demo');
+
+        let progress = 0;
+        let reqId = null;
+        let startY = 0; // Начальная высота линии (верх контейнера)
+
+        // Текущая позиция контрольной точки кривой
+        let cx = window.innerWidth / 2;
+        let cy = 0;
+
+        // Целевая позиция (куда стремится точка)
+        let targetX = window.innerWidth / 2;
+        let targetY = 0;
+
+        // Физика пружины
+        let velX = 0;
+        let velY = 0;
+        const tension = 0.1; // Натяжение
+        const damp = 0.85; // Затухание
+
+        function updateString() {
+            const width = container.offsetWidth;
+
+            // Физика
+            const forceX = (targetX - cx) * tension;
+            const forceY = (targetY - cy) * tension;
+
+            velX = (velX + forceX) * damp;
+            velY = (velY + forceY) * damp;
+
+            cx += velX;
+            cy += velY;
+
+            // Рисуем кривую Безье
+            // M0,0 - начало (левый верхний угол)
+            // Q cx,cy - контрольная точка (наш "изгиб")
+            // width,0 - конец (правый верхний угол)
+            path.setAttribute('d', `M0,0 Q${cx},${cy} ${width},0`);
+
+            // Останавливаем анимацию, если движения почти нет
+            if (Math.abs(velX) > 0.1 || Math.abs(velY) > 0.1 || Math.abs(targetY - cy) > 0.1) {
+                reqId = requestAnimationFrame(updateString);
+            } else {
+                reqId = null;
+            }
+        }
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            // Координаты мыши относительно контейнера
+            targetX = e.clientX - rect.left;
+            targetY = e.clientY - rect.top;
+
+            // Если анимация не идет, запускаем
+            if (!reqId) updateString();
+        });
+
+        container.addEventListener('mouseleave', () => {
+            // Возвращаем струну в исходное положение (прямая линия)
+            targetY = 0;
+            targetX = container.offsetWidth / 2; // Центр по X не важен, но пусть будет красиво
+            if (!reqId) updateString();
+        });
+
+
+        // ЛОГИКА ДЛЯ ВАРИАНТА 5 (СКРОЛЛ БАР)
+        window.onscroll = function() {myScrollFunction()};
+
+        function myScrollFunction() {
+            var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            var scrolled = (winScroll / height) * 100;
+            document.getElementById("myBar").style.width = scrolled + "%";
+        }
+    </script>
+</body>
+</html>

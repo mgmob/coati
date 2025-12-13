@@ -1,0 +1,111 @@
+{
+  "name": "RAG: Indexing To Arango",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "index-chunk",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ec61b8a3-6e72-48af-b7c3-c6884e475c57",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -160
+      ],
+      "webhookId": "index-chunk"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://arangodb:8529/_db/rag/_api/document/docs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.body.text }}"
+            },
+            {
+              "name": "file_path",
+              "value": "={{ $json.body.file_path }}"
+            },
+            {
+              "name": "embedding",
+              "value": "={{ $json.body.embedding }}"
+            },
+            {
+              "name": "chunk_index",
+              "value": "={{ $json.body.chunk_index }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "76cff1a0-67d2-4b88-bc4e-653cf20b0142",
+      "name": "ArangoDB API Insert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        64,
+        -160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "jAZFxtYhDSH0xDn5",
+          "name": "ArangoDB Root"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "9d18c7b7-d5d6-46d8-80d6-471987951d80",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -160
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ArangoDB API Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ArangoDB API Insert": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

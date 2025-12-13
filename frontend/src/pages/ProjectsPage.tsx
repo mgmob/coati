@@ -2,64 +2,45 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, ArrowRight, Calendar } from 'lucide-react';
 
-// API & Types
-import { api, type Project } from '../api';
-import { apiLogger } from '../lib/apiLogger';
+// Zustand Store
+import { useProjectsStore } from '../stores/projectsStore';
 
 // ATOMS
 import { Button } from '../components/atoms/Button';
 import { Card } from '../components/atoms/Card';
 import { Typography } from '../components/atoms/Typography';
 import { Input } from '../components/atoms/Input';
-import { Logo } from '../components/atoms/Logo'; // <-- Импортируем Лого
+import { Logo } from '../components/atoms/Logo';
+
+// MOLECULES
+import { TipsBanner } from '../components/molecules/TipsBanner';
 
 // ORGANISMS
 import { SidebarNav } from '../components/organisms/SidebarNav';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Zustand store
+  const { projects, loading, error, fetchProjects, createProject } = useProjectsStore();
 
   // Form State
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    setIsLoading(true);
-    const correlationId = `ProjectsPage-loadProjects-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    try {
-      apiLogger.setCurrentLocation('ProjectsPage::loadProjects');
-      apiLogger.setCurrentExpected('Array<Project> – список проектов пользователя');
-      apiLogger.setCurrentCorrelationId(correlationId);
-      const data = await api.getProjects();
-      setProjects(data);
-      apiLogger.markProcessedGlobally('listProjects', true);
-    } catch {
-      // Обработка ошибки
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    fetchProjects();
+  }, [fetchProjects]);
 
   const handleCreate = async () => {
     if (!newProjectName.trim()) return;
     setIsCreating(true);
-    const correlationId = `ProjectsPage-handleCreate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     try {
-      apiLogger.setCurrentLocation('ProjectsPage::handleCreate');
-      apiLogger.setCurrentExpected('Project – новый созданный проект');
-      apiLogger.setCurrentCorrelationId(correlationId);
-      // Передаем пустую строку как описание
-      const newProject = await api.createProject(newProjectName, '');
+      const newProject = await createProject(newProjectName, '');
       setNewProjectName('');
       navigate(`/project/${newProject.id}`);
-      apiLogger.markProcessedGlobally('createProject', true);
-    } catch {
+    } catch (error) {
+      console.error('Error creating project:', error);
       alert('Ошибка при создании проекта');
     } finally {
       setIsCreating(false);
@@ -87,6 +68,9 @@ export default function ProjectsPage() {
               </Typography>
             </div>
           </div>
+
+          {/* Tips Banner with rotating advice */}
+          <TipsBanner />
 
           {/* Create Project Card */}
           <Card className="p-6 border-blue-100 bg-blue-50/50">
@@ -121,8 +105,10 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            {isLoading ? (
+            {loading ? (
               <div className="text-center py-12 text-gray-400">Загрузка...</div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-400">{error}</div>
             ) : projects.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
                 <Typography variant="h4" color="text-gray-400">Нет проектов</Typography>

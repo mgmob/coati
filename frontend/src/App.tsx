@@ -1,19 +1,18 @@
+import { DebugModeProvider } from './lib/debugModeContext';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Layout } from './components/Layout';
 import ProjectsPage from './pages/ProjectsPage';
-// ProjectDetailsPage создадим чуть позже, пока поставим заглушку
-const ProjectDetailsPage = () => <div>Страница проекта (в разработке)</div>;
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<ProjectsPage />} />
-          <Route path="project/:id" element={<ProjectDetailsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <DebugModeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<ProjectsPage />} />
+          <Route path="/project/:id" element={<ProjectDetailsPage />} />
+        </Routes>
+      </BrowserRouter>
+    </DebugModeProvider>
   );
 }
 

@@ -24,3 +24,14 @@ Untitled-1.html
 
 # Logs
 *.log
+.clinerules
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Infrastructure data (БД, credentials, executions)
+# These directories contain database files and should NOT be in git
+infra/arangodb_data/
+infra/n8n_data/

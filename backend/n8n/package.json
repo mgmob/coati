@@ -1,0 +1,23 @@
+{
+    "name": "coati-n8n-workflows",
+    "version": "1.0.0",
+    "description": "n8n workflows automation scripts for Coati project",
+    "scripts": {
+        "workflows:backup": "node scripts/backup-workflows.js",
+        "workflows:sync": "node scripts/sync-workflows.js"
+    },
+    "keywords": [
+        "n8n",
+        "workflows",
+        "automation",
+        "backup"
+    ],
+    "author": "Coati Team",
+    "license": "MIT",
+    "dependencies": {
+        "dotenv": "^16.4.5"
+    },
+    "engines": {
+        "node": ">=14.0.0"
+    }
+}

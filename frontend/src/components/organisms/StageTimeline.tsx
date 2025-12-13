@@ -3,6 +3,7 @@ import { Check, Circle, Clock, Wrench } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../atoms/Button';
 import { type StageStep, type AIModel, type SystemPrompt } from '../../api';
+import { useDebugMode } from '../../lib/useDebugMode';
 
 interface StageTimelineProps {
   steps: StageStep[];
@@ -18,15 +19,30 @@ export const StageTimeline: React.FC<StageTimelineProps> = ({
   availableModels,
   availablePrompts
 }) => {
+  const { log } = useDebugMode();
   const [steps, setSteps] = useState<StageStep[]>(initialSteps);
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Debug logging for component input data
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    log('StageTimeline component mounted', {
+      initialStepsCount: initialSteps?.length || 0,
+      availableModelsCount: availableModels?.length || 0,
+      availablePromptsCount: availablePrompts?.length || 0,
+      hasOnSave: !!onSave,
+      initialSteps: initialSteps || []
+    });
+  }, [initialSteps, availableModels, availablePrompts, onSave, log]);
+
+  useEffect(() => {
     setSteps(initialSteps);
     setIsDirty(false);
-  }, [initialSteps]);
+    log('StageTimeline steps updated', {
+      newStepsCount: initialSteps?.length || 0,
+      steps: initialSteps || []
+    });
+  }, [initialSteps, log]);
 
   const toggleExpand = (id: string) => {
     setExpandedStepId(expandedStepId === id ? null : id);

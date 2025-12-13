@@ -1,30 +1,317 @@
-# n8n Secure Workflow Backup System
+# n8n Workflows Automation
 
-This directory contains scripts and configurations for securely backing up n8n workflows without exposing sensitive data.
+Автоматизация управления n8n workflows для проекта Coati.
 
-## How to Export Workflows
+## 📋 Содержание
 
-Run the npm script from the project root:
+- [Обзор](#обзор)
+- [Требования](#требования)
+- [Установка](#установка)
+- [Использование](#использование)
+- [Структура](#структура)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Обзор
+
+Этот пакет содержит скрипты для автоматического backup и sync n8n workflows между локальной файловой системой и n8n instance через REST API.
+
+**Преимущества:**
+- ✅ Workflows в репозитории Git (version control)
+- ✅ Возможность code review изменений
+- ✅ Автоматический deployment в production
+- ✅ Backup из коробки
+- ✅ Infrastructure as Code подход
+
+---
+
+## Требования
+
+- **Node.js:** >= 14.0.0
+- **n8n:** Запущенный instance с настроенным API Key
+- **n8n API Key:** Должен быть создан в n8n Settings → n8n API
+
+---
+
+## Установка
+
+### 1. Установить зависимости
 
 ```bash
-npm run n8n:backup
+cd backend/n8n
+npm install
 ```
 
-This will export the workflow JSON files to `backend/n8n/workflows/` directory using Docker commands to ensure files are copied to the host machine. Ensure you review the files before committing to Git to confirm no sensitive data is included.
+Это установит:
+- `dotenv` - для работы с переменными окружения
 
-## Warning
+### 2. Настроить переменные окружения
 
-**CRITICAL:** Make sure your workflows use n8n Credentials for any secrets, API keys, or passwords. Do NOT hardcode these values directly in workflow nodes as they might be exported with the logic.
+Убедитесь, что в корневом `.env` файле есть:
 
-## How to Restore Workflows
+```bash
+# n8n Configuration
+N8N_URL=http://localhost:5678
+N8N_API_KEY=your-n8n-api-key-here
+```
 
-1. In the n8n UI, navigate to the workflows section.
-2. Manually import the JSON files from `backend/n8n/workflows/`.
-3. Create any missing Credentials in the n8n UI (they will not be restored automatically for security reasons).
-4. Link the imported workflows to the newly created Credentials.
+**Как получить API Key:**
+1. Откройте n8n UI: http://localhost:5678
+2. Перейдите в Settings → n8n API
+3. Нажмите "Create an API key"
+4. Укажите Label (например, "Coati Workflows")
+5. Скопируйте сгенерированный ключ
+6. Добавьте в `.env` файл
+
+---
+
+## Использование
+
+### 🔄 Backup Workflows
+
+Выгружает все workflows из n8n в JSON файлы:
+
+```bash
+npm run workflows:backup
+```
+
+**Что происходит:**
+1. Подключается к n8n через API
+2. Получает список всех workflows
+3. Для каждого workflow получает полные данные
+4. Очищает от служебной информации (id, timestamps и т.д.)
+5. Сохраняет в `workflows/<workflow-name>.json`
+
+**Когда использовать:**
+- После изменения workflows в n8n UI
+- Перед коммитом в Git
+- Для создания backup перед важными изменениями
+
+### ⬆️ Sync Workflows
+
+Загружает workflows из JSON файлов в n8n:
+
+```bash
+npm run workflows:sync
+```
+
+**Что происходит:**
+1. Читает все JSON файлы из папки `workflows/`
+2. Получает список существующих workflows в n8n
+3. Для каждого файла:
+   - Если workflow существует → **обновляет**
+   - Если не существует → **создает новый**
+
+**Когда использовать:**
+- После клонирования репозитория
+- При deployment в новое окружение
+- После изменения JSON файлов вручную
+- Для восстановления из backup
+
+---
+
+## Структура
+
+```
+backend/n8n/
+├── scripts/
+│   ├── backup-workflows.js   # Скрипт выгрузки workflows
+│   └── sync-workflows.js     # Скрипт загрузки workflows
+├── workflows/                # JSON файлы workflows (source of truth)
+│   ├── Coati/                # Workflows проекта Coati
+│   │   ├── API - AI Connect.json
+│   │   ├── API - Create Project.json
+│   │   ├── API - Projects.json
+│   │   └── Coati Data API.json
+│   └── RAG/                  # RAG workflows (для справки)
+│       ├── RAG- Indexing To Arango.json
+│       └── RAG- Search.json
+├── package.json              # npm scripts и зависимости
+└── README.md                 # Этот файл
+```
+
+**Организация workflows:**
+- **Coati/** - Все workflows для проекта Coati (API endpoints, data processing)
+- **RAG/** - RAG-специфичные workflows (для справки, не используются в основном проекте)
+- Тестовые workflows (My workflow*) автоматически пропускаются при backup
+
+**Автоматическая сортировка:**
+Скрипт `backup-workflows.js` автоматически распределяет workflows по папкам на основе их названий:
+- `RAG:*` или `RAG *` → папка RAG
+- `My workflow*` → пропускаются (тестовые)
+- Остальные (API*, Coati*) → папка Coati
+
+---
+
+## Примеры использования
+
+### Сценарий 1: Изменили workflow в n8n UI
+
+```bash
+# 1. Выгрузить изменения
+cd backend/n8n
+npm run workflows:backup
+
+# 2. Проверить изменения
+git diff workflows/
+
+# 3. Закоммитить
+git add workflows/
+git commit -m "Update Coati Data API workflow"
+```
+
+### Сценарий 2: Склонировали репозиторий
+
+```bash
+# 1. Установить зависимости
+cd backend/n8n
+npm install
+
+# 2. Настроить .env (добавить N8N_API_KEY)
+
+# 3. Загрузить workflows в n8n
+npm run workflows:sync
+```
+
+### Сценарий 3: Изменили JSON вручную
+
+```bash
+# 1. Отредактировали workflows/Coati Data API.json
+
+# 2. Загрузить в n8n
+cd backend/n8n
+npm run workflows:sync
+
+# 3. Проверить в n8n UI
+```
+
+---
+
+## Troubleshooting
+
+### ❌ Ошибка: "N8N_API_KEY не найден"
+
+**Проблема:** API Key не настроен в `.env`
+
+**Решение:**
+```bash
+# Проверьте, что в корневом .env есть:
+N8N_URL=http://localhost:5678
+N8N_API_KEY=n8n_api_ваш_ключ
+```
+
+---
+
+### ❌ Ошибка: "HTTP 401 Unauthorized"
+
+**Проблема:** Неверный API Key или истек срок действия
+
+**Решение:**
+1. Проверьте правильность ключа в `.env`
+2. Убедитесь, что ключ скопирован полностью (без пробелов)
+3. Создайте новый ключ в n8n Settings → n8n API
+
+---
+
+### ❌ Ошибка: "Connection refused"
+
+**Проблема:** n8n не запущен или недоступен
+
+**Решение:**
+```bash
+# Проверьте, что n8n запущен
+curl http://localhost:5678/healthz
+
+# Если нет, запустите через docker-compose
+cd c:/Projects/Coati
+docker-compose up -d n8n
+```
+
+---
+
+### ❌ Ошибка: "Папка workflows не найдена"
+
+**Проблема:** Скрипт sync не может найти папку с файлами
+
+**Решение:**
+```bash
+# Убедитесь, что вы в правильной директории
+cd backend/n8n
+
+# Проверьте наличие папки
+ls workflows/
+```
+
+---
+
+### ⚠️ Workflows не обновляются после sync
+
+**Проблема:** n8n кэширует workflows
+
+**Решение:**
+```bash
+# Перезапустите n8n
+docker-compose restart n8n
+
+# Или обновите страницу в браузере (Ctrl+F5)
+```
+
+---
 
 ## Best Practices
 
-- Use `$env.VAR_NAME` syntax for environment-based configuration variables.
-- Always use n8n Credentials for secrets, tokens, and sensitive authentication data.
-- Regularly run the export script and commit sanitized workflows to Git for version control and disaster recovery.
+### 1. Всегда делайте backup перед sync
+
+```bash
+npm run workflows:backup
+npm run workflows:sync
+```
+
+### 2. Проверяйте изменения перед коммитом
+
+```bash
+npm run workflows:backup
+git diff workflows/
+```
+
+### 3. Используйте осмысленные названия workflows
+
+❌ Плохо: `My workflow 1`, `Test workflow`
+✅ Хорошо: `Coati Data API`, `API - AI Connect`
+
+### 4. Регулярно делайте backup
+
+Добавьте в свой workflow:
+- После каждого изменения в n8n UI
+- Перед deployment
+- В конце рабочего дня
+
+---
+
+## Автоматизация (будущее)
+
+Планируется добавить:
+
+- **watch-workflows.js** - автоматический backup при изменениях
+- **CI/CD integration** - автоматический sync при push в Git
+- **Validation** - проверка корректности JSON перед sync
+- **Diff preview** - предпросмотр изменений перед sync
+
+---
+
+## Поддержка
+
+При возникновении проблем:
+
+1. Проверьте [Troubleshooting](#troubleshooting)
+2. Убедитесь, что все требования выполнены
+3. Проверьте логи n8n: `docker-compose logs n8n`
+
+---
+
+**Боже в помощь мою вонми, Господи помощи ми потщися** 🙏
+
+---
+
+_Последнее обновление: 13.12.2025_

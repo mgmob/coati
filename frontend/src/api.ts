@@ -1,6 +1,17 @@
 // --- TYPES ---
 import { apiLogger } from './lib/apiLogger';
 
+// ArangoDB Response Types
+interface ArangoResponse<T> {
+  result: T;
+}
+
+interface ArangoCursorResponse<T> {
+  result: T[];
+  hasMore?: boolean;
+  count?: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -69,7 +80,9 @@ export interface AnalysisResult {
 
 // --- API CLIENT ---
 
-const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/data-api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5678/webhook';
+const DATA_ENDPOINT = import.meta.env.VITE_N8N_DATA_API || '/data-api';
+const N8N_WEBHOOK_URL = `${API_BASE}${DATA_ENDPOINT}`;
 
 export const api = {
   // Generic Fetch Wrapper
@@ -90,31 +103,30 @@ export const api = {
   // --- PROJECTS ---
 
   getProjects: async (): Promise<Project[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('listProjects');
-    if (data && data.result && Array.isArray(data.result)) return data.result;
-    return Array.isArray(data) ? data : [];
+    const data = await api._callDataApi<ArangoCursorResponse<Project>>('listProjects');
+    return data.result || [];
   },
 
   createProject: async (name: string, description: string = ''): Promise<Project> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('createProject', { name, description });
-    return data.result || data;
+    const data = await api._callDataApi<ArangoResponse<Project>>('createProject', { name, description });
+    return data.result;
   },
 
   getProjectDetails: async (id: string): Promise<ProjectDetailsData> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('getProjectDetails', { id });
-    return data.result || data;
+    const data = await api._callDataApi<ArangoResponse<ProjectDetailsData>>('getProjectDetails', { id });
+    return data.result;
   },
 
   // --- STAGES & TEMPLATES ---
 
   listTemplates: async (): Promise<StageTemplate[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('listTemplates');
-    if (data && data.result && Array.isArray(data.result)) return data.result;
-    return [];
+    try {
+      const data = await api._callDataApi<ArangoCursorResponse<StageTemplate>>('listTemplates');
+      return data.result || [];
+    } catch (error) {
+      console.error('[API] listTemplates Error:', error);
+      return [];
+    }
   },
 
   addStage: async (projectId: string, templateId: string): Promise<void> => {
@@ -133,24 +145,21 @@ export const api = {
   // --- AI CONFIG ---
 
   getAIModels: async (): Promise<AIModel[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('listAIModels');
-    if (data && data.result && Array.isArray(data.result)) return data.result;
-    return [];
+    const data = await api._callDataApi<ArangoCursorResponse<AIModel>>('listAIModels');
+    return data.result || [];
   },
 
   getSystemPrompts: async (): Promise<SystemPrompt[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('listSystemPrompts');
-    if (data && data.result && Array.isArray(data.result)) return data.result;
-    return [];
+    const data = await api._callDataApi<ArangoCursorResponse<SystemPrompt>>('listSystemPrompts');
+    return data.result || [];
   },
 
   chatWithAI: async (message: string, context: string = '', modelId: string = 'gpt-4o'): Promise<string> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await api._callDataApi<any>('chat', { message, context, modelId });
-    // Если API возвращает объект с полем reply/answer, нужно вернуть его
-    // Если просто строку - вернуть строку
+    interface ChatResponse {
+      reply?: string;
+      result?: string;
+    }
+    const data = await api._callDataApi<ChatResponse>('chat', { message, context, modelId });
     return data.reply || data.result || "Ответ от ИИ не получен";
   },
 };
