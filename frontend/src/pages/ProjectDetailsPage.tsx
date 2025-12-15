@@ -20,6 +20,7 @@ import { EditorToolbar } from '../components/organisms/EditorToolbar';
 import { TiptapEditor } from '../components/organisms/TiptapEditor';
 import { StageTimeline } from '../components/organisms/StageTimeline';
 import { ContextPanel } from '../components/organisms/ContextPanel';
+import { AIProviderSelector } from '../components/organisms/AIProviderSelector';
 import { useDebugMode } from '../lib/useDebugMode';
 import type { StageStep, StageTemplate } from '../api';
 
@@ -185,14 +186,17 @@ function ProjectDetailsContent() {
                 )}
               </div>
 
-              {/* Footer Stats */}
-              <div className="p-3 border-t border-gray-200 bg-gray-50 shrink-0">
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                  <span>Context Usage</span>
-                  <span>45%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '45%' }} />
+              {/* Footer: AI Provider + Stats */}
+              <div className="border-t border-gray-200 bg-gray-50 shrink-0">
+                <AIProviderSelector compact className="border-b border-gray-200" />
+                <div className="p-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span>Context Usage</span>
+                    <span>45%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '45%' }} />
+                  </div>
                 </div>
               </div>
             </div>

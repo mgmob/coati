@@ -102,12 +102,29 @@ async function getExistingWorkflows() {
 
 /**
  * Создать новый workflow
+ * Фильтрует поля по схеме n8n API
  */
 async function createWorkflow(workflowData) {
   try {
+    // Фильтруем поля согласно схеме POST /workflows
+    // Только допустимые поля: name, nodes, connections, settings
+    const filteredData = {
+      name: workflowData.name,
+      nodes: workflowData.nodes,
+      connections: workflowData.connections
+    };
+
+    // Опциональные поля (если есть)
+    if (workflowData.settings) {
+      filteredData.settings = workflowData.settings;
+    }
+    if (workflowData.staticData) {
+      filteredData.staticData = workflowData.staticData;
+    }
+
     const response = await makeRequest(`${N8N_URL}/api/v1/workflows`, {
       method: 'POST',
-      body: workflowData
+      body: filteredData
     });
     return response.data || response;
   } catch (error) {

@@ -1,0 +1,485 @@
+{
+    "name": "Coati AI Provider Manager",
+    "nodes": [{
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-provider",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "provider-webhook-001",
+            "name": "Webhook AI Provider",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                -400,
+                200
+            ],
+            "webhookId": "ai-provider-manager-001"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [{
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 2
+                                },
+                                "conditions": [{
+                                    "id": "action-list-models",
+                                    "leftValue": "={{ $json.body.action }}",
+                                    "rightValue": "listModels",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 2
+                                },
+                                "conditions": [{
+                                    "id": "action-test-connection",
+                                    "leftValue": "={{ $json.body.action }}",
+                                    "rightValue": "testConnection",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 2
+                                },
+                                "conditions": [{
+                                    "id": "action-chat",
+                                    "leftValue": "={{ $json.body.action }}",
+                                    "rightValue": "chat",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 2
+                                },
+                                "conditions": [{
+                                    "id": "action-analyze",
+                                    "leftValue": "={{ $json.body.action }}",
+                                    "rightValue": "analyze",
+                                    "operator": {
+                                        "type": "string",
+                                        "operation": "equals"
+                                    }
+                                }],
+                                "combinator": "and"
+                            }
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "provider-switch-001",
+            "name": "Switch Action",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.3,
+            "position": [
+                -160,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare Ollama List Models Request\nconst payload = $input.item.json.body.payload || {};\nconst providerUrl = payload.url || 'http://ollama:11434';\n\nreturn {\n  json: {\n    providerUrl: providerUrl,\n    endpoint: '/api/tags'\n  }\n};"
+            },
+            "id": "prepare-list-models-001",
+            "name": "Prepare List Models",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                80,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $json.providerUrl }}{{ $json.endpoint }}",
+                "options": {
+                    "timeout": 10000,
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "http-list-models-001",
+            "name": "HTTP List Models",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                280,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Format Ollama models response\nconst data = $input.item.json;\n\nif (!data.models || !Array.isArray(data.models)) {\n  return {\n    json: {\n      success: false,\n      error: 'Invalid response from provider',\n      models: []\n    }\n  };\n}\n\nconst models = data.models.map(m => ({\n  id: m.name,\n  name: m.name,\n  size: m.size,\n  modified: m.modified_at,\n  details: m.details || {}\n}));\n\nreturn {\n  json: {\n    success: true,\n    provider: 'ollama',\n    models: models,\n    count: models.length\n  }\n};"
+            },
+            "id": "format-models-001",
+            "name": "Format Models Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare Test Connection Request\nconst payload = $input.item.json.body.payload || {};\nconst providerUrl = payload.url || 'http://ollama:11434';\n\nreturn {\n  json: {\n    providerUrl: providerUrl,\n    // Using /api/tags as health check - if it responds, Ollama is running\n    endpoint: '/api/tags'\n  }\n};"
+            },
+            "id": "prepare-test-001",
+            "name": "Prepare Test Connection",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                80,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $json.providerUrl }}{{ $json.endpoint }}",
+                "options": {
+                    "timeout": 5000,
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "http-test-001",
+            "name": "HTTP Test Connection",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                280,
+                200
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Format test connection response\nconst data = $input.item.json;\nconst error = data.error;\n\nif (error) {\n  return {\n    json: {\n      success: false,\n      connected: false,\n      error: typeof error === 'string' ? error : error.message || 'Connection failed',\n      timestamp: Date.now()\n    }\n  };\n}\n\n// If we got models array, connection is successful\nconst hasModels = data.models && Array.isArray(data.models);\n\nreturn {\n  json: {\n    success: true,\n    connected: true,\n    provider: 'ollama',\n    modelsAvailable: hasModels ? data.models.length : 0,\n    timestamp: Date.now()\n  }\n};"
+            },
+            "id": "format-test-001",
+            "name": "Format Test Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare Chat Request\nconst payload = $input.item.json.body.payload || {};\nconst providerUrl = payload.url || 'http://ollama:11434';\nconst model = payload.model || 'llama3.2:3b';\nconst messages = payload.messages || [];\nconst systemPrompt = payload.systemPrompt || 'Ты полезный AI ассистент. Отвечай на русском языке.';\n\n// Build messages array\nconst fullMessages = [\n  { role: 'system', content: systemPrompt },\n  ...messages\n];\n\nreturn {\n  json: {\n    providerUrl: providerUrl,\n    endpoint: '/api/chat',\n    requestBody: {\n      model: model,\n      messages: fullMessages,\n      stream: false,\n      options: payload.options || {}\n    }\n  }\n};"
+            },
+            "id": "prepare-chat-001",
+            "name": "Prepare Chat Request",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                80,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.providerUrl }}{{ $json.endpoint }}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.requestBody }}",
+                "options": {
+                    "timeout": 120000,
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "http-chat-001",
+            "name": "HTTP Chat",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                280,
+                400
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Format chat response\nconst data = $input.item.json;\n\nif (data.error) {\n  return {\n    json: {\n      success: false,\n      error: data.error,\n      reply: null\n    }\n  };\n}\n\nreturn {\n  json: {\n    success: true,\n    reply: data.message?.content || '',\n    model: data.model,\n    totalDuration: data.total_duration,\n    evalCount: data.eval_count,\n    timestamp: Date.now()\n  }\n};"
+            },
+            "id": "format-chat-001",
+            "name": "Format Chat Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare Analyze Document Request\nconst payload = $input.item.json.body.payload || {};\nconst providerUrl = payload.url || 'http://ollama:11434';\nconst model = payload.model || 'llama3.2:3b';\nconst text = payload.text || '';\nconst context = payload.context || '';\n\nconst systemPrompt = payload.systemPrompt || `Ты опытный бизнес-аналитик. Твоя задача - проанализировать техническое задание и задать уточняющие вопросы.\n\nПРАВИЛА:\n1. Найди неопределенности, противоречия, неполные требования\n2. Для КАЖДОГО вопроса укажи:\n   - id: уникальный идентификатор (q1, q2, ...)\n   - question: сам вопрос (конкретный и короткий)\n   - quote: цитата из текста, к которой относится вопрос\n3. Верни JSON в формате:\n{\n  \"questions\": [{\"id\": \"q1\", \"question\": \"...\", \"quote\": \"...\"}],\n  \"issues\": [\"проблема 1\", ...],\n  \"suggestions\": [\"рекомендация 1\", ...]\n}\n\nIMPORTANT: You must output ONLY valid JSON.\nDo not include markdown formatting like \\`\\`\\`json.\nDo not include any intro or outro text.\n\nНЕ придумывай информацию. Задавай вопросы только о реально найденных неопределенностях.`;\n\nconst userMessage = context \n  ? `Контекст:\\n${context}\\n\\nТекст для анализа:\\n${text}`\n  : `Текст для анализа:\\n${text}`;\n\nreturn {\n  json: {\n    providerUrl: providerUrl,\n    endpoint: '/api/chat',\n    requestBody: {\n      model: model,\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user', content: userMessage }\n      ],\n      stream: false,\n      format: 'json',\n      options: {\n        temperature: 0.3\n      }\n    }\n  }\n};"
+            },
+            "id": "prepare-analyze-001",
+            "name": "Prepare Analyze Request",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                80,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.providerUrl }}{{ $json.endpoint }}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.requestBody }}",
+                "options": {
+                    "timeout": 180000,
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "http-analyze-001",
+            "name": "HTTP Analyze",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                280,
+                600
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Smart JSON Parser for AI responses\nfunction parseAIResponse(rawText) {\n  if (!rawText || typeof rawText !== 'string') {\n    return null;\n  }\n  \n  let cleaned = rawText;\n  \n  // 1. Remove markdown code block wrappers\n  cleaned = cleaned.replace(/```json\\s*/gi, '').replace(/```\\s*/g, '');\n  \n  // 2. Find JSON start\n  const jsonStart = cleaned.indexOf('{');\n  if (jsonStart > 0) {\n    cleaned = cleaned.slice(jsonStart);\n  }\n  \n  // 3. Find JSON end\n  const jsonEnd = cleaned.lastIndexOf('}');\n  if (jsonEnd > 0 && jsonEnd < cleaned.length - 1) {\n    cleaned = cleaned.slice(0, jsonEnd + 1);\n  }\n  \n  // 4. Remove JS comments\n  cleaned = cleaned.replace(/\\/\\/.*$/gm, '').replace(/\\/\\*[\\s\\S]*?\\*\\//g, '');\n  \n  // 5. Try to parse\n  try {\n    return JSON.parse(cleaned);\n  } catch (e) {\n    // 6. Try to fix common issues\n    try {\n      // Fix trailing commas\n      cleaned = cleaned.replace(/,\\s*([}\\]])/g, '$1');\n      // Fix single quotes\n      cleaned = cleaned.replace(/'/g, '\"');\n      return JSON.parse(cleaned);\n    } catch (e2) {\n      return null;\n    }\n  }\n}\n\n// Format analyze response\nconst data = $input.item.json;\n\nif (data.error) {\n  return {\n    json: {\n      success: false,\n      error: data.error,\n      analysis: null\n    }\n  };\n}\n\nconst rawContent = data.message?.content || '';\nconst parsed = parseAIResponse(rawContent);\n\nif (!parsed) {\n  return {\n    json: {\n      success: false,\n      error: 'Failed to parse AI response as JSON',\n      rawResponse: rawContent,\n      analysis: null\n    }\n  };\n}\n\n// Validate structure\nconst analysis = {\n  questions: Array.isArray(parsed.questions) ? parsed.questions : [],\n  issues: Array.isArray(parsed.issues) ? parsed.issues : [],\n  suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : []\n};\n\nreturn {\n  json: {\n    success: true,\n    analysis: analysis,\n    model: data.model,\n    totalDuration: data.total_duration,\n    timestamp: Date.now()\n  }\n};"
+            },
+            "id": "format-analyze-001",
+            "name": "Format Analyze Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}",
+                "options": {}
+            },
+            "id": "respond-001",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                720,
+                200
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook AI Provider": {
+            "main": [
+                [{
+                    "node": "Switch Action",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Switch Action": {
+            "main": [
+                [{
+                    "node": "Prepare List Models",
+                    "type": "main",
+                    "index": 0
+                }],
+                [{
+                    "node": "Prepare Test Connection",
+                    "type": "main",
+                    "index": 0
+                }],
+                [{
+                    "node": "Prepare Chat Request",
+                    "type": "main",
+                    "index": 0
+                }],
+                [{
+                    "node": "Prepare Analyze Request",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Prepare List Models": {
+            "main": [
+                [{
+                    "node": "HTTP List Models",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "HTTP List Models": {
+            "main": [
+                [{
+                    "node": "Format Models Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Format Models Response": {
+            "main": [
+                [{
+                    "node": "Respond to Webhook",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Prepare Test Connection": {
+            "main": [
+                [{
+                    "node": "HTTP Test Connection",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "HTTP Test Connection": {
+            "main": [
+                [{
+                    "node": "Format Test Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Format Test Response": {
+            "main": [
+                [{
+                    "node": "Respond to Webhook",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Prepare Chat Request": {
+            "main": [
+                [{
+                    "node": "HTTP Chat",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "HTTP Chat": {
+            "main": [
+                [{
+                    "node": "Format Chat Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Format Chat Response": {
+            "main": [
+                [{
+                    "node": "Respond to Webhook",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Prepare Analyze Request": {
+            "main": [
+                [{
+                    "node": "HTTP Analyze",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "HTTP Analyze": {
+            "main": [
+                [{
+                    "node": "Format Analyze Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Format Analyze Response": {
+            "main": [
+                [{
+                    "node": "Respond to Webhook",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "Europe/Moscow",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "pinData": {},
+    "tags": []
+}

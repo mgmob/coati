@@ -162,4 +162,92 @@ export const api = {
     const data = await api._callDataApi<ChatResponse>('chat', { message, context, modelId });
     return data.reply || data.result || "Ответ от ИИ не получен";
   },
+
+  // --- ITERATIONS ---
+
+  saveIteration: async (params: {
+    projectId: string;
+    stageId: string;
+    stepId: string;
+    questions: QAItem[];
+    answers: Record<string, string>;
+    aiResponse?: unknown;
+  }): Promise<{ id: string }> => {
+    const data = await api._callDataApi<ArangoResponse<{ id: string }>>('saveIteration', params);
+    return data.result;
+  },
+
+  getIterations: async (projectId: string, stageId: string): Promise<unknown[]> => {
+    const data = await api._callDataApi<ArangoCursorResponse<unknown>>('getIterations', { projectId, stageId });
+    return data.result || [];
+  },
+
+  // --- SYSTEM PROMPTS ---
+
+  getSystemPrompt: async (id: string): Promise<{ id: string; name: string; body: string; category: string }> => {
+    const data = await api._callDataApi<ArangoResponse<{ id: string; name: string; body: string; category: string }>>('getSystemPrompt', { id });
+    return data.result;
+  },
+
+  createSystemPrompt: async (params: {
+    name: string;
+    body: string;
+    category: string;
+  }): Promise<{ id: string }> => {
+    const data = await api._callDataApi<ArangoResponse<{ id: string }>>('createSystemPrompt', params);
+    return data.result;
+  },
+
+  updateSystemPrompt: async (id: string, body: string): Promise<void> => {
+    await api._callDataApi('updateSystemPrompt', { id, body });
+  },
+
+  // --- AI ANALYSIS ---
+
+  analyzeDocument: async (params: {
+    text: string;
+    context?: string;
+    systemPrompt?: string;
+  }): Promise<AnalysisResult> => {
+    // Используем отдельный endpoint для AI Provider
+    const AI_PROVIDER_URL = `${API_BASE}/ai-provider`;
+
+    // Получаем настройки AI провайдера из localStorage
+    const storedConfig = localStorage.getItem('coati-ai-provider');
+    const config = storedConfig ? JSON.parse(storedConfig).state : {
+      url: 'http://ollama:11434',
+      selectedModel: 'llama3.2:3b'
+    };
+
+    const response = await apiLogger.wrappedFetch(AI_PROVIDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'analyze',
+        payload: {
+          url: config.url,
+          model: config.selectedModel,
+          text: params.text,
+          context: params.context,
+          systemPrompt: params.systemPrompt
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as {
+      success: boolean;
+      analysis?: AnalysisResult;
+      error?: string;
+    };
+
+    if (!data.success || !data.analysis) {
+      throw new Error(data.error || 'Анализ не удался');
+    }
+
+    return data.analysis;
+  },
 };

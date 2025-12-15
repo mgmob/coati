@@ -1,4 +1,11 @@
 {
-    "css.lint.unknownAtRules": "ignore",
-    "scss.lint.unknownAtRules": "ignore"
+    // Отключить markdownlint для всех markdown файлов
+    "markdownlint.config": {
+        "default": false
+    },
+
+    // Альтернативный способ - игнорировать все markdown файлы
+    "markdownlint.ignore": [
+        "**/*.md"
+    ]
 }

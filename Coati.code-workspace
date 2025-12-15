@@ -5,5 +5,8 @@
 		{
 			"path": "../Personal"
 		}
-	]
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Coati"
+	}
 }

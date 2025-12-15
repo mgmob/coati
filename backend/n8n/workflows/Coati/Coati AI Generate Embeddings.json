@@ -1,0 +1,135 @@
+{
+    "name": "Coati AI Generate Embeddings",
+    "nodes": [{
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "generate-embeddings",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "embeddings-webhook-001",
+            "name": "Webhook Embeddings",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                -200,
+                200
+            ],
+            "webhookId": "embeddings-generator-001"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare Ollama Embeddings Request\n// Using nomic-embed-text model (768 dimensions, multilingual)\n\nconst payload = $input.item.json.body.payload || $input.item.json.body || {};\nconst text = payload.text || '';\nconst providerUrl = payload.url || 'http://ollama:11434';\nconst model = payload.model || 'nomic-embed-text';\n\nif (!text || text.trim() === '') {\n  return {\n    json: {\n      error: 'Text is required for embedding generation',\n      success: false\n    }\n  };\n}\n\nreturn {\n  json: {\n    providerUrl: providerUrl,\n    endpoint: '/api/embeddings',\n    requestBody: {\n      model: model,\n      prompt: text\n    },\n    originalText: text\n  }\n};"
+            },
+            "id": "prepare-embeddings-001",
+            "name": "Prepare Embeddings Request",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                40,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.providerUrl }}{{ $json.endpoint }}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.requestBody }}",
+                "options": {
+                    "timeout": 30000,
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    }
+                }
+            },
+            "id": "http-embeddings-001",
+            "name": "HTTP Embeddings",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                280,
+                200
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Format embeddings response\nconst data = $input.item.json;\n\nif (data.error) {\n  return {\n    json: {\n      success: false,\n      error: typeof data.error === 'string' ? data.error : data.error.message || 'Embedding generation failed',\n      embedding: null\n    }\n  };\n}\n\nconst embedding = data.embedding;\n\nif (!embedding || !Array.isArray(embedding)) {\n  return {\n    json: {\n      success: false,\n      error: 'Invalid embedding response from Ollama',\n      embedding: null\n    }\n  };\n}\n\nreturn {\n  json: {\n    success: true,\n    embedding: embedding,\n    dimensions: embedding.length,\n    model: 'nomic-embed-text',\n    timestamp: Date.now()\n  }\n};"
+            },
+            "id": "format-embeddings-001",
+            "name": "Format Embeddings Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                520,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}",
+                "options": {}
+            },
+            "id": "respond-embeddings-001",
+            "name": "Respond Embeddings",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                760,
+                200
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Embeddings": {
+            "main": [
+                [{
+                    "node": "Prepare Embeddings Request",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Prepare Embeddings Request": {
+            "main": [
+                [{
+                    "node": "HTTP Embeddings",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "HTTP Embeddings": {
+            "main": [
+                [{
+                    "node": "Format Embeddings Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Format Embeddings Response": {
+            "main": [
+                [{
+                    "node": "Respond Embeddings",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "Europe/Moscow",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "pinData": {},
+    "tags": []
+}

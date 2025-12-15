@@ -3,6 +3,8 @@
     "version": "1.0.0",
     "description": "n8n workflows automation scripts for Coati project",
     "scripts": {
+        "backup": "node scripts/backup-workflows.js",
+        "sync": "node scripts/sync-workflows.js",
         "workflows:backup": "node scripts/backup-workflows.js",
         "workflows:sync": "node scripts/sync-workflows.js"
     },

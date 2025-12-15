@@ -1,7 +1,6 @@
 {
   "name": "Coati Data API",
-  "nodes": [
-    {
+  "nodes": [{
       "parameters": {
         "httpMethod": "POST",
         "path": "data-api",
@@ -26,8 +25,7 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
+          "parameters": [{
               "name": "query",
               "value": "LET project = DOCUMENT(CONCAT(\"Projects/\", @id))\n\n// Получаем этапы проекта, отсортированные по порядку\nLET stages = (\n    FOR s IN Stages \n    FILTER s.project_id == @id \n    SORT s.order ASC \n    RETURN s\n)\n\n// Получаем последнее требование (контент)\nLET reqs = (\n    FOR r IN Requirements \n    FILTER r.projectId == @id \n    SORT r.createdAt DESC \n    LIMIT 1 \n    RETURN r.content\n)\n\n// Получаем список доступных моделей (для выпадающего списка)\nLET models = (\n    FOR m IN AI_Models \n    RETURN { id: m._key, name: m.name, provider: m.provider }\n)\n\n// Получаем промпты\nLET prompts = (\n    FOR p IN Prompts \n    RETURN { id: p._key, name: p.title, description: p.category }\n)\n\nRETURN {\n    projectName: project.name,\n    stages: stages,\n    content: FIRST(reqs) || \"\",\n    prompts: prompts,\n    models: models\n}"
             },
@@ -90,12 +88,10 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "FOR p IN Prompts RETURN { id: p._key, name: p.title, description: p.category }"
-            }
-          ]
+          "parameters": [{
+            "name": "query",
+            "value": "FOR p IN Prompts RETURN { id: p._key, name: p.title, description: p.category }"
+          }]
         },
         "options": {}
       },
@@ -122,12 +118,10 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "FOR p IN Projects \nSORT p.createdAt DESC \nRETURN { id: p._key, name: p.name, description: p.description, createdAt: p.createdAt }"
-            }
-          ]
+          "parameters": [{
+            "name": "query",
+            "value": "FOR p IN Projects \nSORT p.createdAt DESC \nRETURN { id: p._key, name: p.name, description: p.description, createdAt: p.createdAt }"
+          }]
         },
         "options": {}
       },
@@ -154,8 +148,7 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
+          "parameters": [{
               "name": "query",
               "value": "INSERT { \n  name: @name, \n  description: @description, \n  createdAt: DATE_NOW(), \n  stage: \"brief\"\n} INTO Projects \nRETURN { id: NEW._key, name: NEW.name, description: NEW.description, createdAt: NEW.createdAt }"
             },
@@ -190,12 +183,10 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "FOR t IN StageTemplates RETURN { id: t._key, name: t.name, description: t.description }"
-            }
-          ]
+          "parameters": [{
+            "name": "query",
+            "value": "FOR t IN StageTemplates RETURN { id: t._key, name: t.name, description: t.description }"
+          }]
         },
         "options": {}
       },
@@ -222,8 +213,7 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
+          "parameters": [{
               "name": "query",
               "value": "// 1. Берем шаблон\nLET tpl = DOCUMENT(CONCAT(\"StageTemplates/\", @templateId))\n\n// 2. Создаем новый этап на основе шаблона\nINSERT {\n  project_id: @projectId,\n  name: tpl.name, // Можно дать пользователю переименовать\n  type: tpl._key,\n  status: \"active\",\n  order: 1, // Тут надо бы вычислять MAX(order) + 1, но пока упростим\n  current_step_index: 0,\n  // Копируем шаги и инициализируем пустые данные\n  steps: (\n    FOR s IN tpl.steps\n    RETURN MERGE(s, { \n      status: s.order == 1 ? \"active\" : \"pending\",\n      data: {} // Пустое хранилище для данных формы\n    })\n  )\n} INTO Stages\n\nRETURN NEW"
             },
@@ -258,12 +248,10 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "FOR m IN AI_Models RETURN { id: m._key, name: m.name }"
-            }
-          ]
+          "parameters": [{
+            "name": "query",
+            "value": "FOR m IN AI_Models RETURN { id: m._key, name: m.name }"
+          }]
         },
         "options": {}
       },
@@ -290,12 +278,10 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "FOR p IN SystemPrompts RETURN { id: p._key, name: p.name }"
-            }
-          ]
+          "parameters": [{
+            "name": "query",
+            "value": "FOR p IN SystemPrompts RETURN { id: p._key, name: p.name }"
+          }]
         },
         "options": {}
       },
@@ -316,7 +302,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const action = $input.item.json.body.action;\nlet type = 'READ'; // По умолчанию чтение\n\n// Логика определения типа\nif (action.startsWith('create') || action.startsWith('add') || action === 'chat') {\n  type = 'CREATE';\n} else if (action.startsWith('update') || action.startsWith('set')) {\n  type = 'UPDATE';\n} else if (action.startsWith('delete') || action.startsWith('remove')) {\n  type = 'DELETE';\n}\n// Все остальное (list, get) останется READ\n\n// Добавляем crudType в данные, чтобы следующий Switch его увидел\nreturn { \n  json: { \n    ...$input.item.json, \n    crudType: type \n  } \n};"
+        "jsCode": "const action = $input.item.json.body.action;\nlet type = 'READ'; // По умолчанию чтение\n\n// Логика определения типа\nif (action.startsWith('create') || action.startsWith('add') || action.startsWith('save') || action === 'chat') {\n  type = 'CREATE';\n} else if (action.startsWith('update') || action.startsWith('set')) {\n  type = 'UPDATE';\n} else if (action.startsWith('delete') || action.startsWith('remove')) {\n  type = 'DELETE';\n}\n// Все остальное (list, get) останется READ\n\n// Добавляем crudType в данные, чтобы следующий Switch его увидел\nreturn { \n  json: { \n    ...$input.item.json, \n    crudType: type \n  } \n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -330,8 +316,7 @@
     {
       "parameters": {
         "rules": {
-          "values": [
-            {
+          "values": [{
               "conditions": {
                 "options": {
                   "caseSensitive": true,
@@ -339,17 +324,15 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.crudType }}",
-                    "rightValue": "CREATE",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "d9e5ab14-5e95-46e9-b8c5-cb06481dbde9"
-                  }
-                ],
+                "conditions": [{
+                  "leftValue": "={{ $json.crudType }}",
+                  "rightValue": "CREATE",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  },
+                  "id": "d9e5ab14-5e95-46e9-b8c5-cb06481dbde9"
+                }],
                 "combinator": "and"
               }
             },
@@ -361,17 +344,15 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "52950e4c-2cd1-47cc-856d-4edbcd9bddca",
-                    "leftValue": "={{ $json.crudType }}",
-                    "rightValue": "READ",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                "conditions": [{
+                  "id": "52950e4c-2cd1-47cc-856d-4edbcd9bddca",
+                  "leftValue": "={{ $json.crudType }}",
+                  "rightValue": "READ",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -383,18 +364,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "851884dc-a05b-4acf-96af-559cb1309e6a",
-                    "leftValue": "={{ $json.crudType }}",
-                    "rightValue": "UPDATE",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "851884dc-a05b-4acf-96af-559cb1309e6a",
+                  "leftValue": "={{ $json.crudType }}",
+                  "rightValue": "UPDATE",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -406,18 +385,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "5f98c11f-1fc7-42a6-8940-a5ff539d4e83",
-                    "leftValue": "={{ $json.crudType }}",
-                    "rightValue": "DELETE",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "5f98c11f-1fc7-42a6-8940-a5ff539d4e83",
+                  "leftValue": "={{ $json.crudType }}",
+                  "rightValue": "DELETE",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             }
@@ -437,8 +414,7 @@
     {
       "parameters": {
         "rules": {
-          "values": [
-            {
+          "values": [{
               "conditions": {
                 "options": {
                   "caseSensitive": true,
@@ -446,18 +422,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "d8b53a75-2806-474b-982e-96c24d317fd2",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "createProject",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "d8b53a75-2806-474b-982e-96c24d317fd2",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "createProject",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -469,18 +443,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "330cd4ac-2a6c-49d4-a257-7e7a730877c9",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "addStage",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "330cd4ac-2a6c-49d4-a257-7e7a730877c9",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "addStage",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -492,18 +464,58 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "8b0851c0-3457-4bfd-9c65-065fe9abc69c",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "chat",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "8b0851c0-3457-4bfd-9c65-065fe9abc69c",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "chat",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [{
+                  "id": "save-iteration-001",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "saveIteration",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
+                  }
+                }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [{
+                  "id": "create-system-prompt-001",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "createSystemPrompt",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
+                  }
+                }],
                 "combinator": "and"
               }
             }
@@ -536,8 +548,7 @@
     {
       "parameters": {
         "rules": {
-          "values": [
-            {
+          "values": [{
               "conditions": {
                 "options": {
                   "caseSensitive": true,
@@ -545,17 +556,15 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "getProjectDetails",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "a60981ab-e179-4e01-9f3b-ba66e68b489b"
-                  }
-                ],
+                "conditions": [{
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "getProjectDetails",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  },
+                  "id": "a60981ab-e179-4e01-9f3b-ba66e68b489b"
+                }],
                 "combinator": "and"
               }
             },
@@ -567,18 +576,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "cad90d86-3975-48c8-adfb-46771237f8a5",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "listPrompts",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "cad90d86-3975-48c8-adfb-46771237f8a5",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "listPrompts",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -590,18 +597,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "64568ec2-2206-4152-917d-10d12bdeb6ee",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "listProjects",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "64568ec2-2206-4152-917d-10d12bdeb6ee",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "listProjects",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -613,18 +618,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "4641af8e-edd1-4f12-a6ae-379850d4ef45",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "listTemplates",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "4641af8e-edd1-4f12-a6ae-379850d4ef45",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "listTemplates",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -636,18 +639,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "2a527b05-e210-47e9-aa90-df1a58e7475c",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "listAIModels",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "2a527b05-e210-47e9-aa90-df1a58e7475c",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "listAIModels",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             },
@@ -659,18 +660,16 @@
                   "typeValidation": "strict",
                   "version": 2
                 },
-                "conditions": [
-                  {
-                    "id": "9ac8f22d-8a43-43d7-9053-6b9cac95de3e",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "listSystemPrompts",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
+                "conditions": [{
+                  "id": "9ac8f22d-8a43-43d7-9053-6b9cac95de3e",
+                  "leftValue": "={{ $json.body.action }}",
+                  "rightValue": "listSystemPrompts",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals",
+                    "name": "filter.operator.equals"
                   }
-                ],
+                }],
                 "combinator": "and"
               }
             }
@@ -690,31 +689,27 @@
     {
       "parameters": {
         "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "760a1310-3cff-42eb-8998-0688f1dc1c29",
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "updateStageSteps",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
+          "values": [{
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "leftValue": "",
+                "typeValidation": "strict",
+                "version": 2
+              },
+              "conditions": [{
+                "id": "760a1310-3cff-42eb-8998-0688f1dc1c29",
+                "leftValue": "={{ $json.body.action }}",
+                "rightValue": "updateStageSteps",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }],
+              "combinator": "and"
             }
-          ]
+          }]
         },
         "options": {}
       },
@@ -735,11 +730,9 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [
-            {
-              "name": "query"
-            }
-          ]
+          "parameters": [{
+            "name": "query"
+          }]
         },
         "options": {}
       },
@@ -762,230 +755,182 @@
   "connections": {
     "Webhook Data API": {
       "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Code in JavaScript",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: Get Details": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: List Prompts": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: List Projects": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: Create Project": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: List Templates": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: Add Stage": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: List AI Models": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Arango: List System Prompts": {
       "main": [
-        [
-          {
-            "node": "Wrap Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Wrap Response",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Wrap Response": {
       "main": [
-        [
-          {
-            "node": "Respond Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Respond Data",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Code in JavaScript": {
       "main": [
-        [
-          {
-            "node": "Main Router",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Main Router",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Switch READ": {
       "main": [
-        [
-          {
-            "node": "Arango: Get Details",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: List Prompts",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: List Projects",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: List Templates",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: List AI Models",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: List System Prompts",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Arango: Get Details",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: List Prompts",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: List Projects",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: List Templates",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: List AI Models",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: List System Prompts",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Switch CREATE": {
       "main": [
-        [
-          {
-            "node": "Arango: Create Project",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Arango: Add Stage",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Arango: Create Project",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Arango: Add Stage",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Main Router": {
       "main": [
-        [
-          {
-            "node": "Switch CREATE",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Switch READ",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Switch UPDATE",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Switch DELETE",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Switch CREATE",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Switch READ",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Switch UPDATE",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Switch DELETE",
+          "type": "main",
+          "index": 0
+        }]
       ]
     },
     "Switch UPDATE": {
       "main": [
-        [
-          {
-            "node": "Arango: Update Stage Steps",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{
+          "node": "Arango: Update Stage Steps",
+          "type": "main",
+          "index": 0
+        }]
       ]
     }
   },
