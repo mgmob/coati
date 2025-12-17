@@ -26,7 +26,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
     const state = get();
 
     // Предотвращаем дублирование запросов
-    if (state.loading) return;
+      if (state.loading) return;
 
     set({ loading: true, error: null });
     try {
