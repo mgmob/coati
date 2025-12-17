@@ -1,8 +1,8 @@
 # План реализации AI Engine для Coati (ФИНАЛЬНАЯ ВЕРСИЯ)
 
 > **Статус:** Утвержден
-> **Дата:** 15 декабря 2025
-> **Версия:** 2.0 (с учетом всех уточнений)
+> **Дата:** 15 декабря 2025 (обновлён 17 декабря 2025)
+> **Версия:** 3.0 (с учётом Architecture Specification v2.1)
 
 ---
 
@@ -36,6 +36,8 @@
 5. **Compliance Check** - сверка ответов пользователя с исходным текстом
 6. **Split View** - двухпанельный редактор с react-resizable-panels
 7. **RAG для пользовательских документов** - отдельные workflows и коллекция `user_documents`
+8. **MCP-Arango** - MCP-сервер для управления ArangoDB из Cline
+9. **Optimistic Concurrency Control (CAS)** - защита от race conditions через `_rev`
 
 **Управление workflow:**
 1. Добавление/удаление шагов этапа
@@ -66,10 +68,11 @@
 | `Coati AI Analyze Document` | Анализ документа и генерация вопросов |
 | `Coati AI Compliance Check` | Проверка соответствия ответов |
 | `Coati AI Parse Response` | Sub-workflow: парсинг JSON от AI |
+| `Coati DB Validation Script` | Проверка целостности графа ArangoDB |
 
 ---
 
-## 🎯 План реализации (5 фаз)
+## 🎯 План реализации (обновлённый порядок фаз)
 
 ### **Фаза 1: AI Provider Infrastructure (4-5 дней)**
 
@@ -226,388 +229,6 @@ const AnalysisResultSchema = z.object({
 
 ---
 
-#### 1.4. Дополнить Coati Data API
-
-**CREATE (добавить):**
-```javascript
-- saveIteration(projectId, stageId, {questions, answers, aiResponse})
-- uploadDocument(projectId, file, metadata)
-- createRequirement(projectId, content, source)
-- createSystemPrompt(name, body, category)
-```
-
-**READ (добавить):**
-```javascript
-- getIterations(projectId, stageId) // История вопросов-ответов
-- getDocument(documentId)
-- listDocuments(projectId)
-- getRequirements(projectId)
-- getSystemPrompt(id) // Полный текст промпта
-```
-
-**UPDATE (добавить):**
-```javascript
-- updateStage(stageId, {status, current_step_index})
-- updateProject(projectId, {name, description, stage})
-- updateRequirement(requirementId, content)
-- updateSystemPrompt(id, body)
-- updateStepPrompt(stageId, stepId, customPrompt)
-```
-
-**DELETE (добавить):**
-```javascript
-- deleteProject(projectId)
-- deleteStage(stageId)
-- deleteDocument(documentId)
-- deleteRequirement(requirementId)
-```
-
----
-
-### **Фаза 2: Рефакторинг StageTimeline (2-3 дня)**
-
-#### 2.1. Проблема текущей реализации
-
-В `StageTimeline.tsx` есть два dropdown:
-- ❌ Выбор AI модели — **нужно убрать** (модель выбирается глобально)
-- ✅ Выбор системного промпта — **оставить и улучшить**
-
-#### 2.2. Новый UX для работы с промптами (Progressive Disclosure)
-
-**Состояние 1: Compact View (по умолчанию)**
-```
-[Step 1: Анализ требований]
-  🤖 Senior Business Analyst  [👁️ View] [✏️ Edit]
-  (badge "Modified" если промпт был изменен)
-```
-
-**Состояние 2: Edit Mode (Accordion/Collapsible)**
-```
-[Step 1: Анализ требований]
-  ┌─────────────────────────────────────────┐
-  │ Template: [Senior Business Analyst ▼]   │
-  │           (фильтр по типу шага)          │
-  │                                          │
-  │ You are an experienced BA...            │
-  │ Focus on edge cases and missing reqs... │
-  │ {{ context }}  {{ text }}               │  ← Variables подсвечены
-  │                                          │
-  │ [↩️ Reset] [Save Actions ▼] [Apply]     │
-  └─────────────────────────────────────────┘
-```
-
-**Save Actions Dropdown:**
-1. **Apply** — сохранить только для этого шага (основная кнопка)
-2. **Update Template "{name}"** — перезаписать глобальный шаблон (с подтверждением)
-3. **Save as New...** — создать новый шаблон (запрос имени)
-
-#### 2.3. Компонент PromptEditor
-
-**`frontend/src/components/organisms/PromptEditor.tsx`**
-```typescript
-interface PromptEditorProps {
-  step: StageStep;
-  availablePrompts: SystemPrompt[];  // Фильтрованные по типу шага
-  onApply: (stepId: string, promptText: string) => void;
-  onUpdateTemplate: (promptId: string, body: string) => Promise<void>;
-  onCreateTemplate: (name: string, body: string, category: string) => Promise<void>;
-}
-
-// Состояния:
-// - isExpanded: boolean
-// - editedText: string
-// - isDirty: boolean
-// - selectedTemplateId: string | null
-// - isCustom: boolean (флаг "Modified")
-```
-
-#### 2.4. Функционал редактора промптов
-
-1. **Подсветка переменных:** `{{context}}`, `{{text}}`, `{{previous_result}}` — как badges
-2. **Валидация:** Проверка наличия обязательных переменных
-3. **Dirty State:** Предупреждение при закрытии без сохранения
-4. **Diff View (опционально):** Показать "Было/Стало" перед обновлением шаблона
-
----
-
-### **Фаза 3: AI Analysis Engine (5-6 дней)**
-
-#### 3.1. Context Builder
-
-**Backend workflow: `Coati AI Build Context`**
-
-```
-Input: {projectId, stageId, stepType}
-  ↓
-Parallel queries to ArangoDB:
-  1. Get project metadata
-  2. Get completed stages
-  3. Get previous iterations
-  4. Get requirements from graph
-  5. RAG search (if enabled)
-  ↓
-Merge & format context:
-  """
-  # Проект: {{ projectName }}
-
-  ## История изменений:
-  {{ iterations }}
-
-  ## Существующие требования:
-  {{ requirements }}
-
-  ## Похожие документы (RAG):
-  {{ ragResults }}
-  """
-  ↓
-Return formatted context string
-```
-
-#### 3.2. Базовый AI анализ
-
-**Backend workflow: `Coati AI Analyze Document`**
-
-```
-Webhook (/analyze-document)
-  ↓
-Call "Coati AI Build Context"
-  ↓
-Get System Prompt from ArangoDB
-  ↓
-Call AI Provider (from config)
-  System Prompt: {{ systemPrompt }}
-  User Prompt: {{ context + brief }}
-  ↓
-Call "Coati AI Parse Response"
-  ↓
-Validate JSON structure
-  ↓
-Save to Iterations collection
-  ↓
-Respond with AnalysisResult
-```
-
-**Системный промпт "Анализ неопределенностей":**
-```
-Ты опытный бизнес-аналитик. Твоя задача - проанализировать техническое задание и задать уточняющие вопросы.
-
-ПРАВИЛА:
-1. Найди неопределенности, противоречия, неполные требования
-2. Для КАЖДОГО вопроса укажи:
-   - id: уникальный идентификатор
-   - question: сам вопрос (конкретный и короткий)
-   - quote: цитата из текста, к которой относится вопрос
-3. Верни JSON в формате:
-{
-  "questions": [{id, question, quote}],
-  "issues": ["проблема 1", ...],
-  "suggestions": ["рекомендация 1", ...]
-}
-
-IMPORTANT: You must output ONLY valid JSON.
-Do not include markdown formatting like ```json.
-Do not include any intro or outro text.
-
-НЕ придумывай информацию. Задавай вопросы только о реально найденных неопределенностях.
-```
-
-#### 3.3. Compliance Check
-
-**Backend workflow: `Coati AI Compliance Check`**
-
-```
-Input: {iterationId, originalBrief}
-  ↓
-For each Q&A pair:
-  ↓
-  Call AI with prompt:
-    "Исходный текст: {{ brief }}"
-    "Вопрос: {{ question }}"
-    "Ответ пользователя: {{ answer }}"
-    "ЗАДАЧА: Проверь, согласуется ли ответ с исходным текстом.
-     Верни JSON: {compliant: boolean, reason: string}"
-  ↓
-  Parse result
-  ↓
-Aggregate results:
-  {
-    allCompliant: boolean,
-    results: [{questionId, compliant, reason}]
-  }
-  ↓
-Update Iteration with compliance status
-  ↓
-Respond
-```
-
----
-
-### **Фаза 4: RAG Integration (3-4 дня)**
-
-#### 4.1. Архитектура RAG
-
-**Важно:** Создаем НОВЫЕ workflows для пользовательских документов, старые оставляем для кодовой базы!
-
-| Workflow | Коллекция | Назначение |
-|----------|-----------|------------|
-| `RAG: Indexing To Arango` | `docs` | Кодовая база (для разработчиков) |
-| `RAG: Search` | `docs` | Поиск по кодовой базе |
-| `Coati RAG Indexing To Arango` | `user_documents` | Пользовательские документы |
-| `Coati RAG Search` | `user_documents` | Поиск в пользовательских документах |
-
-#### 4.2. Коллекция user_documents
-
-**ArangoDB Schema:**
-```javascript
-{
-  "_key": "auto-generated",
-  "project_id": "project123",
-  "document_id": "doc456",
-  "chunk_index": 0,
-  "text": "Система должна поддерживать...",
-  "embedding": [0.123, -0.456, ...],  // 768 elements (nomic-embed-text)
-  "metadata": {
-    "source": "brief_v2.txt",
-    "uploadedAt": 1702857600000,
-    "page": 1
-  }
-}
-```
-
-**Индексы:**
-```javascript
-// Для фильтрации по проекту
-db.user_documents.ensureIndex({
-  type: "persistent",
-  fields: ["project_id"]
-});
-```
-
-#### 4.3. Workflow Coati RAG Indexing To Arango
-
-```
-Webhook (/rag-index)
-  ↓
-Split document into chunks (500 tokens)
-  ↓
-For each chunk:
-  Call "Coati AI Generate Embeddings"
-  ↓
-  Insert into ArangoDB:
-    Collection: user_documents
-    Document: {project_id, document_id, chunk_index, text, embedding, metadata}
-  ↓
-Return: {indexed: chunkCount, documentId}
-```
-
-#### 4.4. Workflow Coati RAG Search
-
-```
-Webhook (/rag-search)
-  Input: {query, projectId?, limit: 5}
-  ↓
-Call "Coati AI Generate Embeddings" for query
-  ↓
-ArangoDB AQL Query:
-  FOR doc IN user_documents
-    FILTER @projectId ? doc.project_id == @projectId : true
-    LET score = COSINE_SIMILARITY(doc.embedding, @queryVector)
-    FILTER score > 0.6
-    SORT score DESC
-    LIMIT @limit
-    RETURN {
-      text: doc.text,
-      score: score,
-      source: doc.metadata.source,
-      documentId: doc.document_id
-    }
-  ↓
-Respond: {results: [...]}
-```
-
----
-
-### **Фаза 5: UI/UX & Workflow Management (2-3 дня)**
-
-#### 5.1. Split View Component
-
-**Библиотека:** `react-resizable-panels`
-
-```bash
-npm install react-resizable-panels
-```
-
-**Компонент `SplitViewEditor.tsx`:**
-```typescript
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-
-<PanelGroup direction="horizontal">
-  <Panel defaultSize={60} minSize={30}>
-    <TiptapEditor content={brief} onChange={setBrief} />
-  </Panel>
-
-  <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-blue-500" />
-
-  <Panel defaultSize={40} minSize={25}>
-    <QAPanel analysisData={analysis} onSubmitAnswers={handleAnswers} />
-  </Panel>
-</PanelGroup>
-```
-
-**Функционал:**
-- Изменяемый размер панелей
-- Минимальная ширина каждой панели
-- Сохранение размеров в localStorage
-- Кнопка "Развернуть" для полноэкранного редактора
-
-#### 5.2. Workflow Management UI
-
-**A) Управление этапами**
-- Кнопка "+ Добавить этап" → модальное окно
-- Выбор шаблона этапа из `StageTemplates`
-- После выбора → создание этапа с шагами из шаблона
-- Кнопка "Удалить этап" (с подтверждением)
-
-**B) Управление шагами**
-- Модальное окно "Настройка этапа"
-- Список шагов (drag & drop)
-- Добавление/удаление шагов
-- Сохранение изменений
-
-**C) Страница /templates**
-- Список существующих шаблонов
-- Редактор шаблона с шагами
-- Создание новых шаблонов
-
-#### 5.3. UX Improvements
-
-- Toast уведомления (react-hot-toast)
-- Индикаторы загрузки
-- Keyboard shortcuts (Ctrl+Enter для отправки)
-- Error boundaries
-- Responsive design
-
----
-
-## 📦 Итоговая структура компонентов
-
-```
-ProjectDetailsPage
-├─ AIProviderSelector (глобальный выбор модели)
-├─ StageTimeline (только статусы + inline PromptEditor)
-├─ SplitViewEditor
-│  ├─ TiptapEditor (слева)
-│  │  └─ Кнопка "Анализировать"
-│  └─ QAPanel (справа)
-│     ├─ Вопросы
-│     ├─ Поля для ответов
-│     └─ Кнопка "Отправить ответы"
-├─ TokenMeter (вверху)
-└─ Кнопка "+ Добавить этап"
-```
-
----
-
 ## 📋 Детальный чеклист реализации
 
 ### Фаза 1: AI Provider Infrastructure (4-5 дней) ✅ ЗАВЕРШЕНА
@@ -633,10 +254,6 @@ ProjectDetailsPage
   - [x] Обновлена логика CRUD routing (save* actions → CREATE) ✅
   - [x] Добавлен switch-case для `saveIteration` ✅
   - [x] Добавлен switch-case для `createSystemPrompt` ✅
-  - [ ] `getIterations` (READ) - требуется node
-  - [ ] `getSystemPrompt` (READ) - требуется node
-  - [ ] `updateSystemPrompt` (UPDATE) - требуется node
-  - [ ] `deleteProject`, `deleteStage` (DELETE) - требуется node
 
 #### Frontend
 - [x] Создать `aiProviderStore.ts` (Zustand) ✅
@@ -656,7 +273,6 @@ ProjectDetailsPage
   - [x] `createSystemPrompt()` ✅
   - [x] `analyzeDocument()` ✅
 - [x] Интегрировать AIProviderSelector в ProjectDetailsPage ✅
-- [ ] Установить и настроить Zod (отложено)
 
 #### Скрипты синхронизации
 - [x] Исправлен `sync-workflows.js` ✅
@@ -666,7 +282,323 @@ ProjectDetailsPage
 
 ---
 
+### Фаза 1A: Тестирование Frontend (1 день) ✅ ЗАВЕРШЕНА
+
+> **Цель:** Покрыть тестами существующую логику (TDD Lite)
+> **Дата выполнения:** 16 декабря 2025
+
+#### Настройка тестирования ✅
+- [x] Обновить `.clinerules` с правилами TDD Lite ✅
+- [x] Добавить devDependencies: `@testing-library/react`, `@vitest/ui`, `@vitest/coverage-v8`, `vitest`, `jsdom` ✅
+- [x] Добавить скрипт `test:coverage` в package.json ✅
+- [x] Создать структуру `__tests__/` папок ✅
+- [x] Запустить `npm install` для установки зависимостей ✅
+
+#### Unit тесты для API Client (`frontend/src/__tests__/api.test.ts`) ✅ 15 тестов
+- [x] `getProjects()` - корректный endpoint + обработка ответа ✅
+- [x] `analyzeDocument()` - отправка body, обработка JSON ✅
+- [x] `saveIteration()` - отправка данных Q&A ✅
+- [x] `getIterations()` - получение списка итераций ✅
+- [x] `getSystemPrompt()`, `createSystemPrompt()` ✅
+- [x] Обработка ошибок сети (timeout, 404, 500) ✅
+
+#### Unit тесты для aiProviderStore (`frontend/src/stores/__tests__/aiProviderStore.test.ts`) ✅ 21 тест
+- [x] `testConnection()` обновляет `isConnected` ✅
+- [x] `loadModels()` заполняет `availableModels` ✅
+- [x] `setProvider()` сохраняет конфиг ✅
+- [x] `setUrl()`, `setApiKey()`, `setSelectedModel()` ✅
+- [x] `applyConfig()`, `clearError()`, `reset()` ✅
+- [x] Async loading states (isLoading) ✅
+- [x] Error handling ✅
+
+#### Unit тесты для projectsStore (`frontend/src/stores/__tests__/projectsStore.test.ts`) ✅ 14 тестов
+- [x] `fetchProjects()` загружает список ✅
+- [x] `createProject()` создает проект ✅
+- [x] `selectProject()` выбирает проект ✅
+- [x] `clearError()` очищает ошибку ✅
+- [x] Обработка ошибок ✅
+- [x] Предотвращение дублирующих запросов ✅
+
+---
+
+### Фаза 1B: Architecture Specification v2.1 (2-3 дня) ✅ ЗАВЕРШЕНА
+
+> **Цель:** Создать production-ready спецификацию архитектуры с учетом всех критических блокеров
+> **Дата выполнения:** 17 декабря 2025
+
+#### ✅ Выполненная работа:
+
+**1. Destructive Architecture Review** (`docs/progress/20251217_SPEC-2.0-AUDIT.md`)
+- [x] Проведен детальный аудит спецификации v2.0 на предмет дедлоков и гонок
+- [x] Выявлены критические проблемы с Pessimistic Locking (возможны race conditions)
+- [x] Обнаружены риски "lock stealing", "двойного merge", orphan active атомов
+- [x] Идентифицированы недостающие функции (CRUD holes, error handling, concurrency)
+
+**2. Technical Patch v2.1** (`docs/progress/20251217_PATCH.md`)
+- [x] Разработаны точечные исправления для всех критических блокеров
+- [x] Добавлен Optimistic CAS (Compare-And-Swap) через `_rev`
+- [x] Переработана логика merge/lock/unlock с атомарными операциями
+- [x] Добавлен Validation Script для проверки целостности графа
+
+**3. Architecture Specification v2.1** (4 раздела)
+- [x] Раздел 1: Data Schema v2.1 (`20251217_architecture-v2.1-section1.md`)
+  - Optimistic CAS через `_rev`
+  - Single Parent Invariant
+  - Запрет `docs -> atoms` связей
+- [x] Раздел 2: API Contracts v2.1 (`20251217_architecture-v2.1-section2.md`)
+  - If-Match headers для всех мутаций
+  - Новые коды ошибок: 409 CONFLICT, 423 LOCKED
+  - CAS для lock/unlock/merge/archive
+- [x] Раздел 3: n8n Workflows v2.1 (`20251217_architecture-v2.1-section3.md`)
+  - Все AQL-транзакции с `ignoreRevs: false`
+  - Retry policy для conflicts
+  - Lock timeout cron job
+- [x] Раздел 4: Initial Data Seeding v2.1 (`20251217_architecture-v2.1-section4.md`)
+  - Validation Checklist
+  - Graph Integrity Validation Script
+
+**Результат:** Architecture Specification v2.1 готова к реализации
+
+---
+
+### Фаза 1C: MCP-Arango Setup (1 день) ⏳ СЛЕДУЮЩАЯ
+
+> **Цель:** Создать MCP-сервер для управления ArangoDB из Cline-чата
+> **Приоритет:** Высокий (требуется для миграций v2.0 → v2.1)
+
+#### MCP Server Setup
+- [ ] Создать `backend/mcp-arango/` директорию
+- [ ] Создать `package.json` с зависимостями:
+  ```json
+  {
+    "name": "mcp-arango",
+    "dependencies": {
+      "@modelcontextprotocol/sdk": "latest",
+      "arangojs": "^8.x"
+    }
+  }
+  ```
+- [ ] Создать `index.js` с MCP server
+- [ ] Добавить в `.cline_mcp_settings.json`:
+  ```json
+  {
+    "mcpServers": {
+      "arango": {
+        "command": "node",
+        "args": ["backend/mcp-arango/index.js"],
+        "env": {
+          "ARANGO_URL": "http://localhost:8529",
+          "ARANGO_DB": "coati_dev"
+        }
+      }
+    }
+  }
+  ```
+
+#### MCP Tools
+- [ ] `arango_query(aql, bindVars)` - выполнить AQL запрос
+- [ ] `arango_create_index(collection, fields, type)` - создать индекс
+- [ ] `arango_list_collections()` - список коллекций
+- [ ] `arango_validate_graph()` - запустить validation script
+- [ ] `arango_migrate(description, aql)` - выполнить миграцию с логированием
+
+#### Миграция v2.0 → v2.1
+- [ ] Удалить `parent_doc_id` из всех `sections`:
+  ```aql
+  FOR s IN sections
+    UPDATE s WITH {parent_doc_id: null} IN sections
+    OPTIONS {keepNull: false}
+  ```
+- [ ] Проверить отсутствие `docs -> atoms` связей
+- [ ] Добавить недостающие индексы (если нужны)
+- [ ] Запустить validation script
+
+#### Документация
+- [ ] Создать `docs/mcp-arango.md` с примерами использования
+- [ ] Обновить README.md с инструкцией по настройке MCP
+
+**Использование (примеры):**
+```
+User: "Добавь индекс на atoms.status"
+Cline → MCP-Arango → arango_create_index('atoms', ['status'])
+
+User: "Запусти миграцию v2.1: удали parent_doc_id из sections"
+Cline → MCP-Arango → arango_migrate('Remove parent_doc_id', '...')
+
+User: "Покажи все атомы с locked_by != null"
+Cline → MCP-Arango → arango_query('FOR a IN atoms FILTER a.locked_by != null RETURN a')
+```
+
+---
+
+### Фаза 1D: Optimistic Concurrency Control (CAS) (2-3 дня) ⏳
+
+> **Цель:** Реализовать защиту от race conditions через `_rev` и If-Match headers
+> **Приоритет:** Критический (блокирует Фазу 1E)
+
+#### Backend (n8n: `Coati Data API`)
+
+**Обновить существующие workflows с CAS:**
+- [ ] `POST /atoms/:id/lock`
+  - Принимать If-Match header с `atom_rev`
+  - CAS UPDATE с `ignoreRevs: false`
+  - Возвращать новый `atom_rev`
+  - 409 CONFLICT при revision mismatch
+  - 423 LOCKED при активной блокировке
+- [ ] `POST /atoms/:id/unlock`
+  - Принимать If-Match header
+  - Проверка владельца (`locked_by == user_id`)
+  - CAS UPDATE
+  - 423 LOCKED если не владелец
+- [ ] `PATCH /atoms/:id/archive`
+  - Принимать If-Match header
+  - Проверка baseline protection
+  - CAS UPDATE
+  - Удаление из `structure_links`
+- [ ] `POST /proposals/:id/merge`
+  - Принимать If-Match header с `structure_edge_rev`
+  - CAS UPDATE по edge `_rev`
+  - Auto-rebase других proposals
+  - Обновление статусов атомов
+  - Создание revision_links
+
+**Новые endpoints:**
+- [ ] `GET /documents/:id/structure` - вернуть `atom_rev` + `structure_edge_rev`
+- [ ] `GET /errors` - список AI ошибок для Debug Panel
+
+**Retry Policy:**
+- [ ] Реализовать exponential backoff для 409 conflicts
+  - 1st retry: 50ms
+  - 2nd retry: 150ms
+  - 3rd retry: 450ms
+  - Max 3 retries
+
+**Validation Script:**
+- [ ] Создать workflow `Coati DB Validation Script`
+  - Поиск атомов с multiple parents
+  - Проверка proposal_links корректности
+  - Обнаружение illegal `docs -> atoms` edges
+  - Возврат `{ok: boolean, issues: [...]}`
+
+#### Frontend
+
+**Обновить api.ts:**
+```typescript
+// Новые сигнатуры с _rev
+async lockAtom(atomId: string, userId: string, expectedRev: string): Promise<{
+  success: boolean;
+  locked_until: string;
+  atom_rev: string;
+}>
+
+async mergeProposal(proposalId: string, params: {
+  target_active_atom_id: string;
+  structure_edge_id: string;
+  structure_edge_rev: string;
+  user_id: string;
+}): Promise<MergeResult>
+
+// Retry logic
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T>
+
+// Error classes
+class RevisionConflictError extends Error {
+  status = 409;
+}
+
+class ResourceLockedError extends Error {
+  status = 423;
+  constructor(message: string, public lockedBy: string, public lockedUntil: string) {}
+}
+```
+
+**Обновить stores:**
+- [ ] `projectsStore` - хранение `_rev` для каждого атома
+- [ ] Автоматическое обновление `_rev` после мутаций
+- [ ] Обработка 409 с UI feedback ("Data changed, please refresh")
+- [ ] Обработка 423 с UI feedback ("Locked by User X until HH:MM")
+
+**UI Components:**
+- [ ] Conflict Dialog - "Document changed. Refresh?" [Refresh] [Cancel]
+- [ ] Lock Indicator - "🔒 Editing by User A (3:45 remaining)"
+- [ ] Toast notifications для ошибок
+
+#### Тесты
+
+**Unit-тесты (api.ts):**
+- [ ] `lockAtom()` отправляет If-Match header
+- [ ] `lockAtom()` retry на 409 (3 раза)
+- [ ] `lockAtom()` НЕ retry на 423
+- [ ] `mergeProposal()` использует structure_edge_rev
+- [ ] `withRetry()` exponential backoff
+- [ ] Error handling (409, 423)
+
+**Integration-тесты:**
+- [ ] Concurrent lock attempts (User A vs User B)
+- [ ] Stale revision on merge
+- [ ] Baseline protection на archive
+- [ ] Lock timeout (5 минут)
+
+**Stress-тесты (опционально для post-MVP):**
+- [ ] 50 sequential merges
+- [ ] 10+ concurrent users editing
+
+#### Validation Script (npm script)
+- [ ] Создать `scripts/validate-graph.js`
+- [ ] Добавить в package.json:
+  ```json
+  {
+    "scripts": {
+      "db:validate": "node scripts/validate-graph.js"
+    }
+  }
+  ```
+- [ ] Pre-release checklist: запускать вручную перед релизом
+
+**Обоснование ручного запуска (не CI/CD):**
+- Скорость разработки: CI/CD integration занимает 1-2 дня
+- Частота использования: На MVP релизы 1-2 раза в неделю
+- Простота отладки: Ручной запуск → сразу видишь результат
+- Гибкость: Можно запускать по требованию
+
+---
+
+### Фаза 1E: Data API v2.1 (1-2 дня) ⏳
+
+> **Цель:** Завершить CRUD endpoints с поддержкой CAS
+> **Зависимости:** Фаза 1D (CAS Implementation)
+
+#### Backend (n8n: `Coati Data API`)
+
+**Дополнить недостающие endpoints:**
+- [ ] `GET /iterations/:projectId/:stageId` - история Q&A
+- [ ] `GET /prompts/:id` - получить промпт (с _rev)
+- [ ] `PATCH /prompts/:id` - обновить промпт (с If-Match)
+- [ ] `DELETE /projects/:id` - удалить проект
+- [ ] `DELETE /stages/:id` - удалить этап
+- [ ] `DELETE /documents/:id` - удалить документ
+
+**Все endpoints должны:**
+- Поддерживать CAS (If-Match headers)
+- Возвращать обновлённый `_rev`
+- Обрабатывать 409/423 errors
+- Использовать retry policy (где применимо)
+
+#### Frontend
+
+**Обновить api.ts:**
+- [ ] Добавить недостающие функции с CAS-поддержкой
+- [ ] Zod схемы валидации: `AnalysisResultSchema`, `AIProviderConfigSchema`
+
+**Тесты:**
+- [ ] Unit-тесты для новых endpoints
+- [ ] Валидация Zod схем
+
+---
+
 ### Фаза 2: Рефакторинг StageTimeline (2-3 дня)
+
+> **Зависимости:** Фаза 1E (промпты с _rev)
 
 #### Frontend
 - [ ] Удалить dropdown выбора AI модели из `StageTimeline.tsx`
@@ -676,13 +608,19 @@ ProjectDetailsPage
   - [ ] Dropdown выбора шаблона (фильтр по типу шага)
   - [ ] Подсветка переменных `{{...}}`
   - [ ] Split Button: [Apply] + Menu
+    - Apply (сохранить для шага)
+    - Update Template (с CAS!)
+    - Save as New
   - [ ] Кнопка "Reset"
 - [ ] Dirty state tracking
 - [ ] Валидация переменных
+- [ ] CAS при обновлении шаблонов (If-Match: prompt._rev)
 
 ---
 
 ### Фаза 3: AI Analysis Engine (5-6 дней)
+
+> **Зависимости:** Фаза 2 (промпты)
 
 #### Backend (n8n)
 - [ ] Создать workflow `Coati AI Build Context`
@@ -717,12 +655,14 @@ ProjectDetailsPage
 
 ### Фаза 4: RAG Integration (3-4 дня)
 
+> **Зависимости:** Фаза 3 (AI workflows)
+
 #### Подготовка
 - [ ] `ollama pull nomic-embed-text`
 - [ ] Проверить API: `curl http://ollama:11434/api/embeddings`
 
 #### ArangoDB
-- [ ] Создать коллекцию `user_documents`
+- [ ] Создать коллекцию `user_documents` (через MCP-Arango)
 - [ ] Создать индекс по `project_id`
 - [ ] (Опционально) Создать ArangoSearch View
 
@@ -763,9 +703,28 @@ ProjectDetailsPage
 
 ---
 
+## 📦 Итоговая структура компонентов
+
+```
+ProjectDetailsPage
+├─ AIProviderSelector (глобальный выбор модели)
+├─ StageTimeline (только статусы + inline PromptEditor)
+├─ SplitViewEditor
+│  ├─ TiptapEditor (слева)
+│  │  └─ Кнопка "Анализировать"
+│  └─ QAPanel (справа)
+│     ├─ Вопросы
+│     ├─ Поля для ответов
+│     └─ Кнопка "Отправить ответы"
+├─ TokenMeter (вверху)
+└─ Кнопка "+ Добавить этап"
+```
+
+---
+
 ## 🔧 Технические детали
 
-### API Endpoints (n8n webhooks)
+### API Endpoints (n8n webhooks) - обновлённые контракты v2.1
 
 ```
 POST /webhook/ai-provider
@@ -774,6 +733,26 @@ POST /webhook/ai-provider
 POST /webhook/generate-embeddings
   Body: {text: string}
   Response: {embedding: number[]}  // 768 dimensions
+
+POST /webhook/atoms/:id/lock
+  Headers: If-Match: <atom_rev>
+  Body: {user_id: string}
+  Response: {success, locked_until, atom_rev} | 409 | 423
+
+POST /webhook/atoms/:id/unlock
+  Headers: If-Match: <atom_rev>
+  Body: {user_id: string}
+  Response: {success, atom_rev} | 409 | 423
+
+POST /webhook/proposals/:id/merge
+  Headers: If-Match: <structure_edge_rev>
+  Body: {target_active_atom_id, structure_edge_id, user_id}
+  Response: {success, new_active_atom_id, structure_edge_rev, rebased_proposals} | 409 | 423
+
+PATCH /webhook/atoms/:id/archive
+  Headers: If-Match: <atom_rev>
+  Body: {reason: string}
+  Response: {success, archived_at, atom_rev} | 409 | 423
 
 POST /webhook/analyze-document
   Body: {projectId, stageId, content}
@@ -790,6 +769,14 @@ POST /webhook/rag-index
 POST /webhook/rag-search
   Body: {projectId?, query, limit}
   Response: {results: [{text, score, source}]}
+
+GET /webhook/documents/:id/structure
+  Query: baseline_id?
+  Response: {doc_meta, items: [{id, type, atom_rev?, structure_edge_rev?, ...}]}
+
+GET /webhook/errors
+  Query: error_code?, from_date?, limit?
+  Response: {errors: [...], total, has_more}
 ```
 
 ### NPM Dependencies
@@ -804,18 +791,33 @@ npm install zod react-resizable-panels react-hot-toast
 npm install json-repair
 ```
 
+**MCP-Arango:**
+```bash
+npm install @modelcontextprotocol/sdk arangojs
+```
+
 ---
 
-## ⏱️ Оценка времени
+## ⏱️ Оценка времени (обновлённая)
 
-| Фаза | Дни |
-|------|-----|
-| Фаза 1: AI Provider Infrastructure | 4-5 |
-| Фаза 2: Рефакторинг StageTimeline | 2-3 |
-| Фаза 3: AI Analysis Engine | 5-6 |
-| Фаза 4: RAG Integration | 3-4 |
-| Фаза 5: UI/UX & Workflow Management | 2-3 |
-| **ИТОГО** | **16-21** |
+| Фаза | Дни | Статус |
+|------|-----|--------|
+| Фаза 1: AI Provider Infrastructure | 4-5 | ✅ Завершена (15-16 дек) |
+| Фаза 1A: Тестирование Frontend | 1 | ✅ Завершена (16 дек) |
+| Фаза 1B: Architecture Spec v2.1 | 2-3 | ✅ Завершена (17 дек) |
+| **Фаза 1C: MCP-Arango Setup** | **1** | ⏳ **Следующая** |
+| **Фаза 1D: CAS Implementation** | **2-3** | ⏳ |
+| **Фаза 1E: Data API v2.1** | **1-2** | ⏳ |
+| Фаза 2: Рефакторинг StageTimeline | 2-3 | ⏳ |
+| Фаза 3: AI Analysis Engine | 5-6 | ⏳ |
+| Фаза 4: RAG Integration | 3-4 | ⏳ |
+| Фаза 5: UI/UX & Workflow Management | 2-3 | ⏳ |
+| **ИТОГО** | **26-34** | **+4 дня от v2.0** |
+
+**Изменения от предыдущей версии:**
+- Добавлена Фаза 1C: MCP-Arango (+1 день)
+- Добавлена Фаза 1D: CAS Implementation (+2-3 дня)
+- Переименована старая 1C → 1E
 
 ---
 
@@ -824,14 +826,17 @@ npm install json-repair
 | Риск | Митигация |
 |------|-----------|
 | Качество AI ответов (кривой JSON) | Трехуровневая защита: API format, промпт, smart parser |
+| Race conditions при concurrent edits | CAS через `_rev` + retry policy + unit/integration тесты |
 | Производительность RAG | Тестирование на ~1000 документов, оптимизация индексов |
 | UX сложность PromptEditor | User testing, итеративное улучшение |
 | Интеграция с разными AI провайдерами | Единый интерфейс адаптера, начинаем с Ollama |
+| Миграция данных v2.0 → v2.1 | MCP-Arango для безопасных миграций из Cline |
 
 ---
 
 ## ✅ Критерии успеха MVP
 
+### Функциональность:
 1. ✅ Пользователь может выбрать AI провайдера (Ollama/vLLM)
 2. ✅ Пользователь вводит бриф → получает структурированные вопросы
 3. ✅ Пользователь отвечает на вопросы → проходит Compliance Check
@@ -842,16 +847,39 @@ npm install json-repair
 8. ✅ RAG находит похожие документы и добавляет в контекст
 9. ✅ TokenMeter показывает корректное использование токенов
 
+### Надёжность (v2.1):
+10. ✅ Concurrent edits не приводят к race conditions (CAS protection)
+11. ✅ Merge не создаёт orphan active атомы (atomic transactions)
+12. ✅ Lock stealing невозможен (CAS + owner check)
+13. ✅ Граф остаётся консистентным (validation script)
+14. ✅ UI показывает conflicts/locks понятно (409/423 handling)
+
 ---
 
 ## 📝 Следующие шаги
 
-**Реализация начинается с Фазы 1:**
-1. Создать `Coati AI Provider Manager` workflow
-2. Создать `Coati AI Generate Embeddings` workflow
-3. Создать `Coati AI Parse Response` sub-workflow
-4. Дополнить `Coati Data API`
-5. Создать frontend компоненты
+**Текущая фаза: 1C - MCP-Arango Setup**
+
+1. ✅ Финализация спецификации архитектуры v2.1 (Фаза 1B завершена)
+2. 📍 Создать MCP-сервер для ArangoDB (Фаза 1C - следующая)
+3. Реализовать Optimistic Concurrency Control (Фаза 1D)
+4. Завершить Data API с CAS-поддержкой (Фаза 1E)
+5. После завершения Фазы 1E → переход к Фазе 2 (Рефакторинг StageTimeline)
+
+---
+
+## 📚 Связанная документация
+
+**Architecture Specification v2.1:**
+- `docs/progress/20251217_architecture-v2.1-section1.md` - Data Schema
+- `docs/progress/20251217_architecture-v2.1-section2.md` - API Contracts
+- `docs/progress/20251217_architecture-v2.1-section3.md` - n8n Workflows
+- `docs/progress/20251217_architecture-v2.1-section4.md` - Initial Data Seeding
+
+**Review & Audit:**
+- `docs/progress/20251217_architecture-v2-FINAL.md` - Spec v2.0 (superseded)
+- `docs/progress/20251217_SPEC-2.0-AUDIT.md` - Destructive Review
+- `docs/progress/20251217_PATCH.md` - Technical Patch v2.1
 
 ---
 
