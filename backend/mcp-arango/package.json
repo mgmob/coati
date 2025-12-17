@@ -1,0 +1,26 @@
+{
+    "name": "mcp-arango",
+    "version": "1.0.0",
+    "description": "MCP server for ArangoDB management in Coati project",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js",
+        "test": "node --experimental-vm-modules node_modules/vitest/vitest.mjs run",
+        "test:watch": "node --experimental-vm-modules node_modules/vitest/vitest.mjs"
+    },
+    "keywords": [
+        "mcp",
+        "arangodb",
+        "coati"
+    ],
+    "author": "Coati Team",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.25.1",
+        "arangojs": "^8.8.1"
+    },
+    "devDependencies": {
+        "vitest": "^1.0.4"
+    }
+}

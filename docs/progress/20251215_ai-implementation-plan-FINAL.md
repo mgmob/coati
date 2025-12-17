@@ -1,5 +1,13 @@
 # План реализации AI Engine для Coati (ФИНАЛЬНАЯ ВЕРСИЯ)
 
+> ⚠️ **DEPRECATED:** Этот план заменен модульной структурой в `docs/progress/plan/`
+>
+> **Актуальная версия:** [docs/progress/plan/00-TOC.md](plan/00-TOC.md)
+>
+> **Реестр документов:** [docs/progress/plan/00-REGISTRY.md](plan/00-REGISTRY.md)
+
+---
+
 > **Статус:** Утвержден
 > **Дата:** 15 декабря 2025 (обновлён 17 декабря 2025)
 > **Версия:** 3.0 (с учётом Architecture Specification v2.1)

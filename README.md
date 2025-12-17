@@ -7,7 +7,8 @@
 Проект состоит из следующих компонентов:
 
 - **Frontend** (`frontend/`) - React приложение на TypeScript
-- **Backend** (`infra/`) - n8n автоматизации workflows
+- **Backend** (`backend/n8n/`) - n8n автоматизации workflows
+- **MCP-Arango** (`backend/mcp-arango/`) - MCP-сервер для управления ArangoDB из Cline
 - **Database** - ArangoDB NoSQL база данных
 - **Infrastructure** - Docker контейнера для развертывания
 
@@ -45,6 +46,23 @@
    - **n8n API**: http://localhost:5678
    - **ArangoDB WebUI**: http://localhost:8529 (_system/database)
    - **n8n WebUI**: http://localhost:5678 (для управления workflows)
+
+5. **(Опционально) Настройка MCP-Arango для Cline:**
+
+   MCP-сервер позволяет управлять ArangoDB прямо из Cline-чата.
+
+   ```bash
+   # Установить зависимости MCP-сервера
+   pushd backend/mcp-arango; npm install; popd
+
+   # Перезапустить VS Code для подключения MCP
+   # После перезапуска можно использовать команды:
+   # "Покажи все коллекции в базе"
+   # "Проверь целостность графа"
+   # "Создай индекс на atoms.status"
+   ```
+
+   **Документация:** [docs/mcp-arango.md](docs/mcp-arango.md)
 
 ## Структура проекта
 

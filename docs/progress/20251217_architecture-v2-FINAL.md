@@ -1,7 +1,19 @@
 # Requirements Traceability & Analysis System - Architecture Specification v2.0
 
+> ⚠️ **SUPERSEDED by v2.1:** Этот документ заменен Architecture Specification v2.1 (4 раздела)
+>
+> **Актуальная версия:**
+> - [Architecture v2.1 - Section 1: Data Schema](20251217_architecture-v2.1-section1.md)
+> - [Architecture v2.1 - Section 2: API Contracts](20251217_architecture-v2.1-section2.md)
+> - [Architecture v2.1 - Section 3: n8n Workflows](20251217_architecture-v2.1-section3.md)
+> - [Architecture v2.1 - Section 4: Initial Data Seeding](20251217_architecture-v2.1-section4.md)
+>
+> **Реестр документов:** [docs/progress/plan/00-REGISTRY.md](plan/00-REGISTRY.md)
+
+---
+
 **Дата:** 2025-12-17
-**Статус:** Production-Ready (после аудита и стратегических решений)
+**Статус:** DEPRECATED - Replaced by v2.1
 **Изменения от v1:** Исправлены критические блокеры, добавлена обработка concurrency и ошибок AI
 
 ---

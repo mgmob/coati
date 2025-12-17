@@ -1,0 +1,16 @@
+{
+    "mcpServers": {
+        "arango": {
+            "command": "node",
+            "args": [
+                "backend/mcp-arango/index.js"
+            ],
+            "env": {
+                "ARANGO_URL": "http://localhost:8529",
+                "ARANGO_DB": "coati_dev",
+                "ARANGO_USERNAME": "root",
+                "ARANGO_PASSWORD": ""
+            }
+        }
+    }
+}
